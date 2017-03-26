@@ -25,7 +25,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import nya.miku.wishmaster.R;
 import nya.miku.wishmaster.api.ChanModule;
 import nya.miku.wishmaster.cache.BitmapCache;
 import nya.miku.wishmaster.cache.DraftsCache;
@@ -45,9 +44,6 @@ import nya.miku.wishmaster.ui.tabs.TabModel;
 import nya.miku.wishmaster.ui.tabs.TabsState;
 import nya.miku.wishmaster.ui.tabs.TabsSwitcher;
 
-import org.acra.ACRA;
-import org.acra.annotation.ReportsCrashes;
-
 import android.app.ActivityManager;
 import android.app.ActivityManager.RunningAppProcessInfo;
 import android.app.Application;
@@ -62,18 +58,6 @@ import android.preference.PreferenceManager;
  *
  */
 
-@ReportsCrashes(
-        formUri = ACRAConstants.ACRA_FORM_URL,
-        reportType = org.acra.sender.HttpSender.Type.JSON,
-        httpMethod = org.acra.sender.HttpSender.Method.PUT,
-        formUriBasicAuthLogin = ACRAConstants.ACRA_LOGIN,
-        formUriBasicAuthPassword = ACRAConstants.ACRA_PASSWORD,
-        mode = org.acra.ReportingInteractionMode.DIALOG,
-        resDialogText = R.string.crash_dialog_text,
-        resDialogIcon = android.R.drawable.ic_dialog_info,
-        resDialogTitle = R.string.crash_dialog_title,
-        resDialogCommentPrompt = R.string.crash_dialog_comment_prompt,
-        resDialogOkToast = R.string.crash_dialog_ok_toast )
 
 public class MainApplication extends Application {
     
@@ -268,7 +252,6 @@ public class MainApplication extends Application {
     @Override
     public void onCreate() {
         super.onCreate();
-        if (ACRAConstants.ACRA_ENABLED) ACRA.init(this);
         if (isGalleryProcess()) return;
         initObjects();
         instance = this;
