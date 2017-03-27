@@ -24,7 +24,6 @@ dependencies {
 android {
     compileSdkVersion 23
     buildToolsVersion "23.0.2"
-
     packagingOptions {
         exclude 'META-INF/INDEX.LIST'
         exclude 'META-INF/LICENSE'
@@ -48,5 +47,10 @@ android {
     }
     defaultConfig.ndk {
         moduleName "gif"
+    }
+    defaultConfig {
+        applicationId 'bus.chio.wishmaster'
+    }
+    productFlavors {
     }
 }
