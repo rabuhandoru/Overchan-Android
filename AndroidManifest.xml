@@ -258,13 +258,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
             </intent-filter>
         </activity>
         
-        <activity
-            android:name="org.acra.CrashReportDialog"
-            android:theme="@style/Theme_Dialog_Switch"
-            android:launchMode="singleInstance"
-            android:excludeFromRecents="true"
-            android:finishOnTaskLaunch="true" />
-        
         <service android:name="nya.miku.wishmaster.ui.posting.PostingService" />
         <service android:name="nya.miku.wishmaster.ui.downloading.DownloadingService" />
         <service android:name="nya.miku.wishmaster.ui.tabs.TabsTrackerService" />
