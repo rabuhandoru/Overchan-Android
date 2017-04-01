@@ -18,7 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 -->
 
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <string name="app_name">Overchan</string>
+    <string name="app_name">Overchan (fork)</string>
     
     <string name="drawer_open">Drawer öffnen</string>
     <string name="drawer_close">Drawer schließen</string>
