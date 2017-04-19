@@ -97,6 +97,7 @@ public class TumbachModule extends CloudflareChanModule {
     static { DATE_FORMAT.setTimeZone(TimeZone.getTimeZone("GMT")); }
     
     private static final Pattern COMMENT_QUOTE = Pattern.compile("<span class=['\"]quotation['\"]>");
+    private static final Pattern COMMENT_CODE = Pattern.compile("<div class=['\"]code-block[^>]*>(.*?)</div>");
     
     private HashMap<String, BoardModel> boardsMap;
     
@@ -403,6 +404,7 @@ public class TumbachModule extends CloudflareChanModule {
             model.subject = "";
         }
         String text = RegexUtils.replaceAll(json.optString("text"), COMMENT_QUOTE, "<span class=\"unkfunc\">");
+        text = RegexUtils.replaceAll(text, COMMENT_CODE, "<code>$1</code>");
         model.comment = model.comment != null ? (model.comment + text) : text;
         model.email = json.optString("email");
         model.trip = json.optString("tripCode");
@@ -547,13 +549,13 @@ public class TumbachModule extends CloudflareChanModule {
                 break;
         }
         postEntityBuilder.
-                addString("email", model.sage ? "sage" : model.email).
                 addString("name", model.name).
                 addString("subject", model.subject).
                 addString("text", model.comment).
                 addString("signAsOp", model.custommark ? "true" : "false").
                 addString("password", model.password).
                 addString("markupMode", "EXTENDED_WAKABA_MARK,BB_CODE");
+        if (model.sage) postEntityBuilder.addString("sage", "true");
         String rating = (model.icon >= 0 && model.icon < RATINGS.length) ? RATINGS[model.icon] : "SFW";
         if (model.attachments != null && model.attachments.length > 0) {
             for (int i=0; i<model.attachments.length; ++i) {
