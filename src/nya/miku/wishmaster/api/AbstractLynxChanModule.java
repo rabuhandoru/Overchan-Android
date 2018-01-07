@@ -20,7 +20,18 @@ package nya.miku.wishmaster.api;
 
 import android.content.SharedPreferences;
 import android.content.res.Resources;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.webkit.MimeTypeMap;
 
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.math.BigInteger;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -33,20 +44,35 @@ import java.util.Map;
 import java.util.TimeZone;
 import java.util.regex.Pattern;
 
+import org.apache.commons.lang3.StringEscapeUtils;
+
+import cz.msebera.android.httpclient.Header;
 import nya.miku.wishmaster.api.interfaces.CancellableTask;
 import nya.miku.wishmaster.api.interfaces.ProgressListener;
 import nya.miku.wishmaster.api.models.AttachmentModel;
 import nya.miku.wishmaster.api.models.BadgeIconModel;
 import nya.miku.wishmaster.api.models.BoardModel;
+import nya.miku.wishmaster.api.models.CaptchaModel;
+import nya.miku.wishmaster.api.models.DeletePostModel;
 import nya.miku.wishmaster.api.models.PostModel;
+import nya.miku.wishmaster.api.models.SendPostModel;
 import nya.miku.wishmaster.api.models.SimpleBoardModel;
 import nya.miku.wishmaster.api.models.ThreadModel;
 import nya.miku.wishmaster.api.models.UrlPageModel;
 import nya.miku.wishmaster.api.util.ChanModels;
+import nya.miku.wishmaster.api.util.CryptoUtils;
 import nya.miku.wishmaster.api.util.RegexUtils;
 import nya.miku.wishmaster.api.util.UrlPathUtils;
 import nya.miku.wishmaster.api.util.WakabaUtils;
+import nya.miku.wishmaster.common.IOUtils;
 import nya.miku.wishmaster.common.Logger;
+import nya.miku.wishmaster.http.JSONEntry;
+import nya.miku.wishmaster.http.interactive.SimpleCaptchaException;
+import nya.miku.wishmaster.http.streamer.HttpRequestModel;
+import nya.miku.wishmaster.http.streamer.HttpResponseModel;
+import nya.miku.wishmaster.http.streamer.HttpStreamer;
+import nya.miku.wishmaster.lib.base64.Base64;
+import nya.miku.wishmaster.lib.base64.Base64OutputStream;
 import nya.miku.wishmaster.lib.org_json.JSONArray;
 import nya.miku.wishmaster.lib.org_json.JSONObject;
 
@@ -62,7 +88,9 @@ public abstract class AbstractLynxChanModule extends AbstractWakabaModule {
     private static final Pattern GREEN_TEXT_MARK_PATTERN = Pattern.compile("<span class=\"greenText\">(.*?)</span>");
     private static final Pattern REPLY_NUMBER_PATTERN = Pattern.compile("&gt&gt(\\d+)");
     protected Map<String, BoardModel> boardsMap = null;
-    private Map<String, Map<String, String>> flagsMap = null;
+    private Map<String, ArrayList<String>> flagsMap = null;
+    private static String lastCaptchaId;
+    private static String lastCaptchaAnswer;
     
     public AbstractLynxChanModule(SharedPreferences preferences, Resources resources) {
         super(preferences, resources);
@@ -75,8 +103,8 @@ public abstract class AbstractLynxChanModule extends AbstractWakabaModule {
         JSONObject boardsJson = downloadJSONObject(url, (oldBoardsList != null && boardsMap != null), listener, task);
         if (boardsJson == null) return oldBoardsList;
         JSONArray boards = boardsJson.getJSONArray("boards");
+        BoardModel model;
         for (int i = 0, len = boards.length(); i < len; ++i) {
-            BoardModel model;
             model = mapBoardModel(boards.getJSONObject(i));
             list.add(new SimpleBoardModel(model));
         }
@@ -101,35 +129,47 @@ public abstract class AbstractLynxChanModule extends AbstractWakabaModule {
     private BoardModel mapBoardModel(ProgressListener listener, CancellableTask task, BoardModel model) throws Exception {
         String url = getUsingUrl() + model.boardName + "/1.json";
         JSONObject boardJson = downloadJSONObject(url, false, listener, task);
-        model.attachmentsMaxCount = boardJson.optInt("maxFileCount");
-        JSONArray flags = boardJson.optJSONArray("flagData");
-        if (flags != null) {
-            model.allowIcons = true;
-            model.iconDescriptions = new String[flags.length()];
-            if (flagsMap == null) flagsMap = new HashMap<String, Map<String, String>>();
-            Map<String, String> boardFlags = new HashMap<String, String>();
-            for(int i = 0, len = flags.length(); i < len; ++i) {
-                boardFlags.put(flags.getJSONObject(i).getString("name"), flags.getJSONObject(i).getString("_id"));
-                model.iconDescriptions[i] = flags.getJSONObject(i).getString("name");
-            }
-            flagsMap.put(model.boardName, boardFlags);
-        }
+        model.boardDescription = boardJson.optString("boardName", model.boardName);
+        model.attachmentsMaxCount = boardJson.optInt("maxFileCount", 5);
+        model.lastPage = boardJson.optInt("pageCount", BoardModel.LAST_PAGE_UNDEFINED);
         JSONArray settingsJson = boardJson.optJSONArray("settings");
         ArrayList<String> settings = new ArrayList<String>();
         for(int i = 0, len = settingsJson.length(); i < len; ++i) settings.add(settingsJson.getString(i));
-        model.allowNames = settings.contains("forceAnonymity");
-        model.allowDeleteFiles = settings.contains("blockDeletion");
-        model.allowDeletePosts = settings.contains("blockDeletion");
+        model.allowNames = !settings.contains("forceAnonymity");
+        model.allowDeletePosts = !settings.contains("blockDeletion");
+        model.allowDeleteFiles = model.allowDeletePosts;
         model.requiredFileForNewThread = settings.contains("requireThreadFile");
         model.allowRandomHash = settings.contains("uniqueFiles");
         model.uniqueAttachmentNames = settings.contains("uniqueFiles");
         model.attachmentsMaxCount = settings.contains("textBoard") ? 0 : model.attachmentsMaxCount;
+        try {
+            JSONArray flags = boardJson.getJSONArray("flagData");
+            if (flags.length() > 0) {
+                String[] icons = new String[flags.length() + 1];
+                icons[0] = "No flag";
+                if (flagsMap == null) flagsMap = new HashMap<String, ArrayList<String>>();
+                ArrayList<String> boardFlagIds = new ArrayList<String>();
+                for(int i = 0, len = flags.length(); i < len; ++i) {
+                    boardFlagIds.add(flags.getJSONObject(i).getString("_id"));
+                    icons[i + 1] = flags.getJSONObject(i).getString("name");
+                }
+                flagsMap.put(model.boardName, boardFlagIds);
+                model.allowIcons = true;
+                model.iconDescriptions = icons;
+            }
+        } catch (Exception e) {}
         return model;
     }
-    
+
     private BoardModel mapBoardModel(JSONObject object) {
         BoardModel model = getDefaultBoardModel(object.optString("boardUri"));
-        model.boardDescription = object.optString("boardName");
+        model.boardDescription = object.optString("boardName", model.boardName);
+        try {
+            String settings = object.getJSONArray("specialSettings").toString();
+            model.nsfw = !settings.contains("\"sfw\"");
+        } catch (Exception e) {
+            model.nsfw = true;
+        }
         return model;
     }
 
@@ -147,13 +187,15 @@ public abstract class AbstractLynxChanModule extends AbstractWakabaModule {
         board.allowSage = true;
         board.allowEmails = true;
         board.ignoreEmailIfSage = true;
-        board.allowCustomMark = false;
+        board.allowCustomMark = true;
+        board.customMarkDescription = "Spoiler";
         board.allowRandomHash = true;
         board.allowIcons = false;
         board.attachmentsMaxCount = 1;
         board.attachmentsFormatFilters = null;
-        board.markType = BoardModel.MARK_NOMARK;
+        board.markType = BoardModel.MARK_INFINITY;
         board.firstPage = 1;
+        board.lastPage = BoardModel.LAST_PAGE_UNDEFINED;
         board.catalogAllowed = true;
         board.boardName = shortName;
         board.bumpLimit = 500;
@@ -224,6 +266,8 @@ public abstract class AbstractLynxChanModule extends AbstractWakabaModule {
         model.postsCount = object.optInt("postCount");
         model.attachmentsCount = object.optInt("fileCount");
         PostModel post = mapPostModel(object);
+        post.number = model.threadNumber;
+        post.parentThread = model.threadNumber;
         String thumb = object.optString("thumb", "");
         if (thumb.length() > 0) {
             AttachmentModel attachment = new AttachmentModel();
@@ -232,11 +276,9 @@ public abstract class AbstractLynxChanModule extends AbstractWakabaModule {
             attachment.height = -1;
             attachment.width = -1;
             attachment.size = -1;
-            post.attachments = new AttachmentModel[1];
-            post.attachments[0] = attachment;
+            post.attachments = new AttachmentModel[] { attachment };
         }
-        model.posts = new PostModel[1];
-        model.posts[0] = post;
+        model.posts = new PostModel[] { post };
         return model;
     }
     
@@ -245,6 +287,7 @@ public abstract class AbstractLynxChanModule extends AbstractWakabaModule {
         model.threadNumber = Integer.toString(object.optInt("threadId"));
         model.isSticky = object.optBoolean("pinned", false);
         model.isClosed = object.optBoolean("locked", false);
+        model.isCyclical = object.optBoolean("cyclic", false);
         model.postsCount = object.optInt("ommitedPosts", 0) + 1;
         return model;
     }
@@ -252,12 +295,13 @@ public abstract class AbstractLynxChanModule extends AbstractWakabaModule {
     private PostModel mapPostModel(JSONObject object) {
         PostModel model = new PostModel();
         try {
-            model.timestamp = CHAN_DATEFORMAT.parse(object.getString("creation")).getTime();
+            model.timestamp = CHAN_DATEFORMAT.parse(object.optString("creation")).getTime();
         } catch (ParseException e) {
             Logger.e(TAG, "cannot parse date; make sure you choose the right DateFormat for this chan", e);
         }
-        model.email = object.optString("email");
-        model.subject = object.optString("subject");
+        model.name = StringEscapeUtils.unescapeHtml4(object.optString("name"));
+        model.email = StringEscapeUtils.unescapeHtml4(object.optString("email"));
+        model.subject = StringEscapeUtils.unescapeHtml4(object.optString("subject"));
         model.comment = object.optString("markdown", object.optString("message"));
         model.comment = RegexUtils.replaceAll(model.comment, RED_TEXT_MARK_PATTERN, "<font color=\"red\"><b>$1</b></font>");
         model.comment = RegexUtils.replaceAll(model.comment, GREEN_TEXT_MARK_PATTERN, "<span class=\"quote\">$1</span>");
@@ -265,14 +309,12 @@ public abstract class AbstractLynxChanModule extends AbstractWakabaModule {
         String banMessage = object.optString("banMessage", "");
         if (!banMessage.equals(""))
             model.comment = model.comment + "<br/><em><font color=\"red\">("+banMessage+")</font></em>";
-        model.name = object.optString("name");
         String flag = object.optString("flag", "");
         if (!flag.equals("")) {
             BadgeIconModel icon = new BadgeIconModel();
             icon.description = object.optString("flagName");
             icon.source = flag;
-            model.icons = new BadgeIconModel[1];
-            model.icons[0] = icon;
+            model.icons = new BadgeIconModel[] { icon };
         }
         int post_number = object.optInt("postId", -1);
         model.number = post_number == -1 ? null : Integer.toString(post_number);
@@ -284,12 +326,16 @@ public abstract class AbstractLynxChanModule extends AbstractWakabaModule {
         if (!signedRole.equals("")) model.trip = "##" + signedRole;
         String id = object.optString("id", "");
         model.sage = id.equalsIgnoreCase("Heaven") || model.email.toLowerCase(Locale.US).contains("sage");
-        if (!id.equals("")) model.name += (" ID:" + id);
+        if (!id.equals("")) {
+            model.name += (" ID:" + id);
+            model.color = CryptoUtils.hashIdColor(id);
+        }
         JSONArray files = object.optJSONArray("files");
-        if (files == null) return model;
-        model.attachments = new AttachmentModel[files.length()];
-        for (int i = 0, len = files.length(); i < len; ++i) {
-            model.attachments[i] = mapAttachment(files.getJSONObject(i));
+        if (files != null) {
+            model.attachments = new AttachmentModel[files.length()];
+            for (int i = 0, len = files.length(); i < len; ++i) {
+                model.attachments[i] = mapAttachment(files.getJSONObject(i));
+            }
         }
         return model;
     }
@@ -329,6 +375,7 @@ public abstract class AbstractLynxChanModule extends AbstractWakabaModule {
         return url;
     }
 
+    //TODO: parse case-sensitive board names
     @Override
     public UrlPageModel parseUrl(String url) throws IllegalArgumentException {
         String urlPath = UrlPathUtils.getUrlPath(url, getAllDomains());
@@ -357,6 +404,210 @@ public abstract class AbstractLynxChanModule extends AbstractWakabaModule {
     public String fixRelativeUrl(String url) {
         if (url.startsWith("?/")) url = url.substring(1);
         return super.fixRelativeUrl(url);
+    }
+
+    protected CaptchaModel downloadCaptcha(String captchaUrl, ProgressListener listener, CancellableTask task) throws Exception {
+        Bitmap captchaBitmap = null;
+        HttpRequestModel requestModel = HttpRequestModel.DEFAULT_GET;
+        HttpResponseModel responseModel = HttpStreamer.getInstance().getFromUrl(captchaUrl, requestModel, httpClient, listener, task);
+        String captchaId = null;
+        for (Header header : responseModel.headers) {
+            if (header != null && "Set-Cookie".equalsIgnoreCase(header.getName())) {
+                String cookie = header.getValue();
+                if (cookie.contains("captchaid")) {
+                    try {
+                        captchaId = cookie.split(";")[0].split("=")[1];
+                    } catch (Exception e) {
+                    }
+                }
+                if (captchaId != null) break;
+            }
+        }
+        try {
+            InputStream imageStream = responseModel.stream;
+            captchaBitmap = BitmapFactory.decodeStream(imageStream);
+        } finally {
+            responseModel.release();
+        }
+        CaptchaModel captchaModel = new CaptchaModel();
+        captchaModel.type = CaptchaModel.TYPE_NORMAL;
+        captchaModel.bitmap = captchaBitmap;
+        lastCaptchaId = captchaId;
+        return captchaModel;
+    }
+
+    @Override
+    public CaptchaModel getNewCaptcha(String boardName, String threadNumber, ProgressListener listener, CancellableTask task) throws Exception {
+        String captchaUrl = getUsingUrl() + "captcha.js?d=" + Double.toString(Math.random());
+        return downloadCaptcha(captchaUrl, listener, task);
+    }
+
+    private String computeFileMD5(File file) throws NoSuchAlgorithmException, IOException {
+        MessageDigest messageDigest = MessageDigest.getInstance("MD5");
+        messageDigest.reset();
+
+        FileInputStream fis = new FileInputStream(file);
+        byte[] byteArray = new byte[1024];
+        int bytesCount;
+        while ((bytesCount = fis.read(byteArray)) != -1) {
+            messageDigest.update(byteArray, 0, bytesCount);
+        }
+        fis.close();
+
+        byte[] digest = messageDigest.digest();
+        BigInteger bigInt = new BigInteger(1, digest);
+        String md5Hex = bigInt.toString(16);
+        if (md5Hex.length() < 32) {
+            char[] head = new char[32 - md5Hex.length()];
+            Arrays.fill(head, '0');
+            md5Hex = new StringBuilder(32).append(head).append(md5Hex).toString();
+        }
+        return md5Hex;
+    }
+
+    private String checkFileIdentifier(File file, String mime, ProgressListener listener, CancellableTask task) {
+        String hash;
+        try {
+            hash = computeFileMD5(file);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+        String identifier = hash + "-" + mime.replace("/", "");
+        String url = getUsingUrl() + "checkFileIdentifier.js?identifier=" + identifier;
+        String response = "";
+        try {
+            response = HttpStreamer.getInstance().getStringFromUrl(url, null, httpClient, listener, task, false);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+        if (response.contains("true")) return hash;
+        return null;
+    }
+
+    private String base64EncodeFile(File file) throws IOException {
+        ByteArrayOutputStream os = new ByteArrayOutputStream();
+        Base64OutputStream b64os = new Base64OutputStream(os, Base64.NO_WRAP);
+        FileInputStream fis = new FileInputStream(file);
+        IOUtils.copyStream(fis, b64os);
+        return os.toString();
+    }
+
+    public String sendPost(SendPostModel model, ProgressListener listener, CancellableTask task) throws Exception {
+        String url = getUsingUrl() + ".api/" + (model.threadNumber == null ? "newThread" : "replyThread");
+
+        JSONObject jsonPayload = new JSONObject();
+        JSONObject jsonParameters = new JSONObject();
+        jsonPayload.put("captchaId", lastCaptchaId);
+        jsonParameters.put("name", model.name);
+        jsonParameters.put("password", model.password);
+        jsonParameters.put("subject", model.subject);
+        jsonParameters.put("message", model.comment);
+        jsonParameters.put("boardUri", model.boardName);
+        jsonParameters.put("email", model.sage ? "sage" : model.email);
+        if (model.threadNumber != null)
+            jsonParameters.put("threadId", model.threadNumber);
+        if (model.captchaAnswer != null && model.captchaAnswer.length() > 0)
+            jsonParameters.put("captcha", model.captchaAnswer);
+        if (model.icon > 0)
+            jsonParameters.put("flag", flagsMap.get(model.boardName).get(model.icon - 1));
+        MimeTypeMap mimeTypeMap = MimeTypeMap.getSingleton();
+        if (model.attachments != null && model.attachments.length > 0) {
+            JSONArray files = new JSONArray();
+            for (int i = 0; i < model.attachments.length; ++i) {
+                String ext = MimeTypeMap.getFileExtensionFromUrl(model.attachments[i].toURI().toString());
+                String mime = mimeTypeMap.getMimeTypeFromExtension(ext);
+                String md5 = checkFileIdentifier(model.attachments[i], mime, listener, task);
+                JSONObject file = new JSONObject();
+                file.put("name", model.attachments[i].getName());
+                if (md5 != null) {
+                    file.put("md5", md5);
+                    file.put("mime", mime);
+                } else {
+                    file.put("content", "data:" + mime + ";base64," + base64EncodeFile(model.attachments[i]));
+                }
+                file.put("spoiler", model.custommark);
+                files.put(file);
+            }
+            jsonParameters.put("files", files);
+        }
+        jsonPayload.put("parameters", jsonParameters);
+        JSONEntry payload = new JSONEntry(jsonPayload);
+        HttpRequestModel request = HttpRequestModel.builder().setPOST(payload).setNoRedirect(true).build();
+        String response = HttpStreamer.getInstance().getStringFromUrl(url, request, httpClient, null, task, true);
+        lastCaptchaId = null;
+        JSONObject result = new JSONObject(response);
+        String status = result.optString("status");
+        if ("ok".equals(status)) {
+            UrlPageModel urlPageModel = new UrlPageModel();
+            urlPageModel.type = UrlPageModel.TYPE_THREADPAGE;
+            urlPageModel.chanName = getChanName();
+            urlPageModel.boardName = model.boardName;
+            urlPageModel.threadNumber = model.threadNumber;
+            if (model.threadNumber == null) {
+                urlPageModel.threadNumber = Integer.toString(result.optInt("data"));
+            } else {
+                urlPageModel.postNumber = Integer.toString(result.optInt("data"));
+            }
+            return buildUrl(urlPageModel);
+        } else if (status.contains("error") || status.contains("blank")) {
+            String errorMessage = result.optString("data");
+            if (errorMessage.length() > 0) {
+                throw new Exception(errorMessage);
+            }
+        }
+        throw new Exception("Unknown Error");
+    }
+
+    @Override
+    public String deletePost(DeletePostModel model, final ProgressListener listener, final CancellableTask task) throws Exception {
+        String url = getUsingUrl() + ".api/" + "deleteContent";
+        
+        if (lastCaptchaAnswer == null) {
+            throw new SimpleCaptchaException() {
+                private static final long serialVersionUID = 1L;
+                @Override
+                protected Bitmap getNewCaptcha() throws Exception {
+                    return AbstractLynxChanModule.this.getNewCaptcha("", "", listener, task).bitmap;
+                }
+                @Override
+                protected void storeResponse(String response) {
+                    lastCaptchaAnswer = response;
+                }
+            };
+        }
+        
+        JSONObject jsonPayload = new JSONObject();
+        JSONObject jsonParameters = new JSONObject();
+        jsonPayload.put("captchaId", lastCaptchaId);
+        jsonParameters.put("password", model.password);
+        if (lastCaptchaAnswer != null && lastCaptchaAnswer.length() > 0)
+            jsonParameters.put("captcha", lastCaptchaAnswer);
+        jsonParameters.put("deleteMedia", true);
+        if (model.onlyFiles) {
+            jsonParameters.put("deleteUploads", true);
+        }
+        JSONArray jsonArray = new JSONArray();
+        JSONObject post = new JSONObject();
+        post.put("board", model.boardName);
+        post.put("thread", model.threadNumber);
+        if (!model.postNumber.equals(model.threadNumber)) post.put("post", model.postNumber);
+        jsonParameters.put("postings", jsonArray);
+        jsonPayload.put("parameters", jsonParameters);
+        JSONEntry payload = new JSONEntry(jsonPayload);
+        HttpRequestModel request = HttpRequestModel.builder().setPOST(payload).setNoRedirect(true).build();
+        String response = HttpStreamer.getInstance().getStringFromUrl(url, request, httpClient, null, task, true);
+        lastCaptchaId = null;
+        lastCaptchaAnswer = null;
+        JSONObject result = new JSONObject(response);
+        if (result.optString("status").equals("error")) {
+            String errorMessage = result.optString("data");
+            if (errorMessage.length() > 0) {
+                throw new Exception(errorMessage);
+            }
+        }
+        return null;
     }
     
 }

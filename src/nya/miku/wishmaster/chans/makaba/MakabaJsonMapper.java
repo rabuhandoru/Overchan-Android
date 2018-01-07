@@ -150,6 +150,7 @@ public class MakabaJsonMapper {
         }
         model.isSticky = getIntSafe(postsArray.getJSONObject(0), "sticky", 0) != 0;
         model.isClosed = getIntSafe(postsArray.getJSONObject(0), "closed", 0) != 0;
+        model.isCyclical = getIntSafe(postsArray.getJSONObject(0), "endless", 0) != 0;
         return model;
     }
     
@@ -214,7 +215,7 @@ public class MakabaJsonMapper {
             model.type = AttachmentModel.TYPE_IMAGE_STATIC;
             String pathLower = model.path.toLowerCase(Locale.US);
             if (pathLower.endsWith(".gif")) model.type = AttachmentModel.TYPE_IMAGE_GIF;
-            else if (pathLower.endsWith(".webm")) model.type = AttachmentModel.TYPE_VIDEO;
+            else if (pathLower.endsWith(".webm") || pathLower.endsWith(".mp4")) model.type = AttachmentModel.TYPE_VIDEO;
         } catch (Exception e) {
             if (source.has("path")) {
                 model.type = AttachmentModel.TYPE_OTHER_FILE;

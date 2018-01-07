@@ -44,11 +44,16 @@ import nya.miku.wishmaster.ui.tabs.TabModel;
 import nya.miku.wishmaster.ui.tabs.TabsState;
 import nya.miku.wishmaster.ui.tabs.TabsSwitcher;
 
+import org.acra.ACRA;
+import org.acra.annotation.ReportsCrashes;
+
 import android.app.ActivityManager;
 import android.app.ActivityManager.RunningAppProcessInfo;
 import android.app.Application;
+import android.content.ComponentCallbacks2;
 import android.content.SharedPreferences;
 import android.content.res.Resources;
+import android.os.Build;
 import android.preference.PreferenceManager;
 
 /**
@@ -57,7 +62,14 @@ import android.preference.PreferenceManager;
  * @author miku-nyan
  *
  */
-
+@ReportsCrashes(
+        mailTo = ACRAConstants.ACRA_EMAIL,
+        mode = org.acra.ReportingInteractionMode.DIALOG,
+        resDialogText = R.string.crash_dialog_text,
+        resDialogIcon = android.R.drawable.ic_dialog_info,
+        resDialogTitle = R.string.crash_dialog_title,
+        resDialogCommentPrompt = R.string.crash_dialog_comment_prompt,
+        resDialogOkToast = R.string.crash_dialog_ok_toast )
 
 public class MainApplication extends Application {
     
@@ -68,9 +80,7 @@ public class MainApplication extends Application {
             "nya.miku.wishmaster.chans.cirno.CirnoModule",
             "nya.miku.wishmaster.chans.cirno.MikubaModule",
             "nya.miku.wishmaster.chans.dobrochan.DobroModule",
-            "nya.miku.wishmaster.chans.dvach.DvachModule",
             "nya.miku.wishmaster.chans.sevenchan.SevenchanModule",
-            "nya.miku.wishmaster.chans.wakachan.WakachanModule",
             "nya.miku.wishmaster.chans.infinity.InfinityPlModule",
             "nya.miku.wishmaster.chans.cirno.NowereModule",
             "nya.miku.wishmaster.chans.cirno.Chan410Module",
@@ -80,7 +90,6 @@ public class MainApplication extends Application {
             "nya.miku.wishmaster.chans.allchan.AllchanModule",
             "nya.miku.wishmaster.chans.ponyach.PonyachModule",
             "nya.miku.wishmaster.chans.uchan.UchanModule",
-            "nya.miku.wishmaster.chans.sich.SichModule",
             "nya.miku.wishmaster.chans.nullchan.NullchanclubModule",
             "nya.miku.wishmaster.chans.nullchan.NullchaneuModule",
             "nya.miku.wishmaster.chans.nullchan.Null_chanModule",
@@ -88,10 +97,7 @@ public class MainApplication extends Application {
             "nya.miku.wishmaster.chans.mentachsu.MentachsuModule",
             "nya.miku.wishmaster.chans.synch.SynchModule",
             "nya.miku.wishmaster.chans.inach.InachModule",
-            "nya.miku.wishmaster.chans.clairews.ClairewsModule",
             "nya.miku.wishmaster.chans.kurisach.KurisachModule",
-            "nya.miku.wishmaster.chans.chan10.Chan10Module",
-            "nya.miku.wishmaster.chans.haruhichan.HaruhiModule",
             "nya.miku.wishmaster.chans.vichan.VichanModule",
             "nya.miku.wishmaster.chans.lainchan.LainModule",
             "nya.miku.wishmaster.chans.tohnochan.TohnoChanModule",
@@ -104,12 +110,20 @@ public class MainApplication extends Application {
             "nya.miku.wishmaster.chans.samachan.SamachanModule",
             "nya.miku.wishmaster.chans.tumbach.TumbachModule",
             "nya.miku.wishmaster.chans.wizchan.WizchanModule",
-            "nya.miku.wishmaster.chans.infinity.BrchanModule",
-            "nya.miku.wishmaster.chans.nullchdvach.NullchdvachModule",
+            "nya.miku.wishmaster.chans.brchan.BrchanModule",
+            "nya.miku.wishmaster.chans.infinity.LolifoxModule",
             "nya.miku.wishmaster.chans.lampach.LampachModule",
             "nya.miku.wishmaster.chans.kropyvach.KropyvachModule",
             "nya.miku.wishmaster.chans.mentachnet.MentachnetModule",
             "nya.miku.wishmaster.chans.hispachan.HispachanModule",
+            "nya.miku.wishmaster.chans.ernstchan.ErnstModule",
+            "nya.miku.wishmaster.chans.nullchan.NullchanoneModule",
+            "nya.miku.wishmaster.chans.depreschan.DepresModule",
+            "nya.miku.wishmaster.chans.endchan.EndChanModule",
+            "nya.miku.wishmaster.chans.diochan.DiochanModule",
+            "nya.miku.wishmaster.chans.tirech.TirechModule",
+            "nya.miku.wishmaster.chans.tbpchan.TBPchanModule",
+            "nya.miku.wishmaster.chans.mewchnet.MewchnetModule",
     };
     
     private static MainApplication instance;
@@ -137,6 +151,8 @@ public class MainApplication extends Application {
     
     public List<ChanModule> chanModulesList;
     private Map<String, Integer> chanModulesIndex;
+    
+    private String processName;
     
     private void registerChanModules() {
         chanModulesIndex = new HashMap<String, Integer>();
@@ -244,7 +260,7 @@ public class MainApplication extends Application {
     
     private boolean isGalleryProcess() {
         try {
-            return getProcessName().endsWith(":Gallery");
+            return processName.endsWith(":Gallery");
         } catch (Exception e) {
             return false;
         }
@@ -253,6 +269,8 @@ public class MainApplication extends Application {
     @Override
     public void onCreate() {
         super.onCreate();
+        processName = getProcessName();
+        if (ACRAConstants.ACRA_ENABLED) ACRA.init(this);
         if (isGalleryProcess()) return;
         initObjects();
         instance = this;
@@ -282,9 +300,35 @@ public class MainApplication extends Application {
     }
     
     private void clearCaches() {
+        if (isGalleryProcess()) return;
         pagesCache.clearLru();
         bitmapCache.clearLru();
         draftsCache.clearLru();
+    }
+    
+    @Override
+    public void onTrimMemory(int level) {
+
+        // Determine which lifecycle or system event was raised.
+        switch (level) {
+            case ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW:
+            case ComponentCallbacks2.TRIM_MEMORY_RUNNING_CRITICAL:
+            case ComponentCallbacks2.TRIM_MEMORY_MODERATE:
+            case ComponentCallbacks2.TRIM_MEMORY_COMPLETE:
+                try {
+                    getInstance().freeMemoryInternal();
+                } catch (Exception e) {} //если синглтон MainApplication не создан 
+                break;
+
+            default:
+                /*
+                  Release any non-critical data structures.
+
+                  The app received an unrecognized memory level value
+                  from the system. Treat this as a generic low-memory message.
+                */
+                break;
+        }
     }
     
 }

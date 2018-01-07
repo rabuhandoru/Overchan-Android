@@ -311,6 +311,9 @@ public class ArhivachModule extends CloudflareChanModule {
                 if (model.boardPage > 1) url.append((model.boardPage - 1) * 25).append("/");
                 url.append("?q=" + model.searchRequest + "&tags=");
                 break;
+            case UrlPageModel.TYPE_OTHERPAGE:
+                url.append(model.otherPath.startsWith("/") ? model.otherPath.substring(1) : model.otherPath);
+                break;
             default:
                 throw new IllegalArgumentException("wrong page type");
         }
@@ -355,17 +358,16 @@ public class ArhivachModule extends CloudflareChanModule {
                 } else {
                     model.searchRequest = "";
                 }
-            } else if ((urlPath.contains("index") || urlPath.indexOf("/")==0 || urlPath.length()==0) && !urlPath.contains("tags=")) {
+            } else if ((urlPath.length()==0 || urlPath.startsWith("/") || urlPath.contains("index")) && !urlPath.contains("tags=")) {
                 model.type = UrlPageModel.TYPE_BOARDPAGE;
                 model.boardName = "";
                 Matcher matcher = INDEX_PAGE_PATTERN.matcher(urlPath);
                 String page = "";
                 if (matcher.find())
                     page = matcher.group(1);
-                if (!page.equals(""))
-                    model.boardPage = (Integer.parseInt(page) / 25) + 1;
-                else
-                    model.boardPage = 1;
+                model.boardPage = page.equals("") ? 1 : (Integer.parseInt(page) / 25) + 1;
+            } else {
+                throw new Exception("unknown page type");
             }
         } catch (Exception e) {
             model.type = UrlPageModel.TYPE_OTHERPAGE;

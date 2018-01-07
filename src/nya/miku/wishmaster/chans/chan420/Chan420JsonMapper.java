@@ -117,13 +117,13 @@ public class Chan420JsonMapper {
         model.op = false;
         String id = object.optString("id", "");
         model.sage = id.equalsIgnoreCase("Heaven");
-        if (!id.isEmpty()) model.name += (" ID:" + id);
+        if (!id.equals("")) model.name += (" ID:" + id);
         model.timestamp = object.getLong("time") * 1000;
         model.parentThread = object.optString("resto", "0");
         if (model.parentThread.equals("0")) model.parentThread = model.number;
         model.comment = toHtml(model.comment, boardName, model.parentThread);
         String ext = object.optString("ext", "");
-        if (!ext.isEmpty()) {
+        if (!ext.equals("")) {
             AttachmentModel attachment = new AttachmentModel();
             switch (ext) {
                 case ".jpg":

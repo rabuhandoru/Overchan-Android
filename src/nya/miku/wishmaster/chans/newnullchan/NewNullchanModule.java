@@ -22,6 +22,7 @@ import android.content.SharedPreferences;
 import android.content.res.Resources;
 import android.graphics.BitmapFactory;
 import android.graphics.drawable.Drawable;
+import android.net.Uri;
 import android.preference.PreferenceGroup;
 import android.support.v4.content.res.ResourcesCompat;
 
@@ -44,13 +45,13 @@ import nya.miku.wishmaster.api.interfaces.CancellableTask;
 import nya.miku.wishmaster.api.interfaces.ProgressListener;
 import nya.miku.wishmaster.api.models.BoardModel;
 import nya.miku.wishmaster.api.models.CaptchaModel;
+import nya.miku.wishmaster.api.models.DeletePostModel;
 import nya.miku.wishmaster.api.models.PostModel;
 import nya.miku.wishmaster.api.models.SendPostModel;
 import nya.miku.wishmaster.api.models.SimpleBoardModel;
 import nya.miku.wishmaster.api.models.ThreadModel;
 import nya.miku.wishmaster.api.models.UrlPageModel;
 import nya.miku.wishmaster.api.util.ChanModels;
-import nya.miku.wishmaster.api.util.RegexUtils;
 import nya.miku.wishmaster.api.util.UrlPathUtils;
 import nya.miku.wishmaster.common.IOUtils;
 import nya.miku.wishmaster.http.ExtendedMultipartBuilder;
@@ -70,8 +71,8 @@ public class NewNullchanModule extends CloudflareChanModule {
     private static final String CHAN_DOMAIN = "0chan.hk";
     private static final String[] DOMAINS = new String[] { CHAN_DOMAIN };
 
-    private static final Pattern BOARD_PATTERN = Pattern.compile("([\\w\\d]+)/?");
-    private static final Pattern THREADPAGE_PATTERN = Pattern.compile("([\\w\\d]+)/(\\d+)(#\\d+)?");
+    private static final Pattern BOARD_PATTERN = Pattern.compile("(\\w+)");
+    private static final Pattern THREADPAGE_PATTERN = Pattern.compile("(\\w+)/(\\d+)(?:#(\\d+))?");
     private static final String CAPTCHA_BASE64_PREFIX = "data:image/png;base64,";
     
     private static String sessionId = null;
@@ -320,7 +321,7 @@ public class NewNullchanModule extends CloudflareChanModule {
         if (captchaID == null) return null;
         String captchaAnswer = captchas.get(captchaID);
         if (captchaAnswer == null) return null;
-        String url = getUsingUrl() + "api/captcha?captcha=" + captchaID + "&answer=" + captchaAnswer + "&session=" + sessionId;
+        String url = getUsingUrl() + "api/captcha?captcha=" + captchaID + "&answer=" + Uri.encode(captchaAnswer) + "&session=" + sessionId;
         JSONObject response = null;
         try {
             response = downloadJSONObject(url, false, listener, task);
@@ -349,10 +350,8 @@ public class NewNullchanModule extends CloudflareChanModule {
         if (parent == null) {
             PostModel[] parentThread = getPostsList(model.boardName, model.threadNumber, listener, task, null);
             parent = parentThread[0].number;
-        } else {
-            return parent;
+            threadOppost.put(model.threadNumber, parent);
         }
-        threadOppost.put(model.threadNumber, parent);
         return parent;
     }
 
@@ -365,13 +364,13 @@ public class NewNullchanModule extends CloudflareChanModule {
         String comment = model.comment;
 
         if (model.threadNumber != null) {
-            Pattern referencePattern = Pattern.compile(">>(\\d+)");
+            Pattern referencePattern = Pattern.compile("^\\s*>>(\\d+)");
             Matcher matcher = referencePattern.matcher(comment);
             if (matcher.find()) {
                 parent = matcher.group(1);
                 JSONObject post = getPost(parent, listener, task);
                 if (post.optString("threadId").equals(model.threadNumber)) {
-                    comment = RegexUtils.replaceAll(comment, referencePattern, "");
+                    comment = matcher.replaceFirst("");
                 } else {
                     parent = getOpPostID(model, listener, task);
                 }
@@ -404,7 +403,7 @@ public class NewNullchanModule extends CloudflareChanModule {
         captchaId = validateCaptcha(captchaId, listener, task);
         jsonPayload.put("captcha", captchaId != null ? captchaId : JSONObject.NULL);
         JSONEntry payload = new JSONEntry(jsonPayload);
-        HttpRequestModel request = HttpRequestModel.builder().setPOST(payload).build();
+        HttpRequestModel request = HttpRequestModel.builder().setPOST(payload).setNoRedirect(true).build();
         String response = null;
         JSONObject result = null;
         try {
@@ -428,8 +427,11 @@ public class NewNullchanModule extends CloudflareChanModule {
         }
         result = new JSONObject(response);
         if (!result.optBoolean("ok", false)) {
-            String errorMessage = result.optString("reason", "");
-            if (errorMessage.length() > 0) throw new Exception(errorMessage);
+            JSONArray errors = result.optJSONArray("errors");
+            if (errors != null && errors.length() > 0) {
+                String errorMessage = errors.optString(0, "");
+                if (errorMessage.length() > 0) throw new Exception(errorMessage);
+            }
             throw new Exception(response);
         }
         JSONObject post = result.getJSONObject("post");
@@ -442,7 +444,32 @@ public class NewNullchanModule extends CloudflareChanModule {
         return this.buildUrl(urlModel);
     }
 
-    //TODO: implement reportPost method
+    @Override
+    public String reportPost(DeletePostModel model, ProgressListener listener, CancellableTask task) throws Exception {
+        updateSession(listener, task);
+        String url = getUsingUrl() + "api/moderation/reportPost?post=" + model.postNumber + "&session=" + sessionId;
+        JSONObject jsonPayload = new JSONObject();
+        jsonPayload.put("reason", model.reportReason);
+        JSONEntry payload = new JSONEntry(jsonPayload);
+        
+        HttpRequestModel request = HttpRequestModel.builder().setPOST(payload).setNoRedirect(true).build();
+        String response = null;
+        try {
+            response = HttpStreamer.getInstance().getStringFromUrl(url, request, httpClient, null, task, true);
+        } catch (HttpWrongStatusCodeException e) {
+            checkCloudflareError(e, url);
+            throw e;
+        }
+        JSONObject result = new JSONObject(response);
+        if (!result.optBoolean("ok", false)) {
+            String errorMessage = result.optString("reason");
+            if (errorMessage.length() > 0) {
+                throw new Exception(errorMessage);
+            }
+            throw new Exception(response);
+        }
+        return null;
+    }
 
     @Override
     public String buildUrl(UrlPageModel model) throws IllegalArgumentException {
@@ -485,10 +512,7 @@ public class NewNullchanModule extends CloudflareChanModule {
                     model.type = UrlPageModel.TYPE_THREADPAGE;
                     model.boardName = matcher.group(1);
                     model.threadNumber = matcher.group(2);
-                    if (path.contains("#")) {
-                        String post = path.split("#")[1];
-                        if (!post.equals("")) model.postNumber = post;
-                    }
+                    model.postNumber = matcher.group(3);
                 } else {
                     String[] pathList = path.split("\\?", 1);
                     int page = 1;

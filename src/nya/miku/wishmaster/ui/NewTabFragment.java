@@ -20,10 +20,13 @@ package nya.miku.wishmaster.ui;
 
 import java.io.File;
 import java.io.FilenameFilter;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.ListIterator;
 
 import nya.miku.wishmaster.R;
 import nya.miku.wishmaster.api.ChanModule;
+import nya.miku.wishmaster.api.interfaces.CancellableTask;
 import nya.miku.wishmaster.api.models.UrlPageModel;
 import nya.miku.wishmaster.common.Logger;
 import nya.miku.wishmaster.common.MainApplication;
@@ -233,6 +236,7 @@ public class NewTabFragment extends Fragment implements AdapterView.OnItemClickL
     }
     
     private void openLocal() {
+        final List<Database.SavedThreadEntry> savedThreads = MainApplication.getInstance().database.getSavedThreads();
         if (!CompatibilityUtils.hasAccessStorage(activity)) return;
         final ListAdapter savedThreadsAdapter = new ArrayAdapter<Object>(activity, 0) {
             private static final int HEAD_ITEM = 0;
@@ -244,9 +248,8 @@ public class NewTabFragment extends Fragment implements AdapterView.OnItemClickL
             {
                 add(new Object());
                 add(new Object());
-                for (Database.SavedThreadEntry entity : MainApplication.getInstance().database.getSavedThreads()) {
-                    File file = new File(entity.filepath);
-                    if (file.exists()) add(entity);
+                for (Database.SavedThreadEntry entity : savedThreads) {
+                    add(entity);
                 }
             }
             
@@ -295,10 +298,54 @@ public class NewTabFragment extends Fragment implements AdapterView.OnItemClickL
                 return position <= 1 ? HEAD_ITEM : NORMAL_ITEM;
             }
         };
+
+        final CancellableTask task = new CancellableTask.BaseCancellableTask();
+        
+        Thread thread = new Thread(new Runnable() {
+            private final ArrayAdapter savedThreadsArrayAdapter = (ArrayAdapter<Object>) savedThreadsAdapter;
+            private final ArrayList<Database.SavedThreadEntry> deletedThreads = new ArrayList<Database.SavedThreadEntry>();
+            
+            @Override
+            public void run() {
+                int count = 0;
+                for (Database.SavedThreadEntry entity : savedThreads) {
+                    File file = new File(entity.filepath);
+                    synchronized (deletedThreads) {
+                        if (!file.exists()) {
+                            deletedThreads.add(entity);
+                            count = deletedThreads.size();
+                            MainApplication.getInstance().database.removeSavedThread(entity.filepath);
+                        }
+                    }
+                    if (count > 50) updateListAdapter();
+                    if (task.isCancelled()) return;
+                }
+                updateListAdapter();
+            }
+            
+            public void updateListAdapter() {
+                NewTabFragment.this.getActivity().runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        synchronized (deletedThreads) {
+                            ListIterator<Database.SavedThreadEntry> iter = deletedThreads.listIterator();
+                            while(iter.hasNext() && !task.isCancelled()){
+                                savedThreadsArrayAdapter.remove(iter.next());
+                                iter.remove();
+                            }
+                        }
+                        savedThreadsArrayAdapter.notifyDataSetChanged();
+                    }
+                });
+            }
+        });
+
+        thread.start();
         
         DialogInterface.OnClickListener listListener = new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
+                task.cancel();
                 switch (which) {
                     case 0:
                         selectFile();
@@ -316,6 +363,12 @@ public class NewTabFragment extends Fragment implements AdapterView.OnItemClickL
                 setTitle(R.string.newtab_saved_threads_title).
                 setAdapter(savedThreadsAdapter, listListener).
                 setNegativeButton(android.R.string.cancel, null).
+                setOnCancelListener(new DialogInterface.OnCancelListener() {
+                    @Override
+                    public void onCancel(DialogInterface dialog) {
+                        task.cancel();
+                    }
+                }).
                 show();
     }
     

@@ -20,6 +20,7 @@ package nya.miku.wishmaster.chans.makaba;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.regex.Pattern;
 
 /**
  * Константы, используемые в модуле 2ch.hk
@@ -65,15 +66,31 @@ public class MakabaConstants {
             "Тематика", "Творчество", "Техника и софт", "Игры", "Японская культура", "Разное", "Взрослым", "Политика", "Пробное"
     });
     
-    public static final String[] ATTACHMENT_FORMATS = new String[] { "jpg", "jpeg", "png", "gif", "webm" };
+    public static final String[] ATTACHMENT_FORMATS = new String[] { "jpg", "jpeg", "png", "gif", "webm", "mp4" };
     
     public static final String[] CATALOG_TYPES = { "catalog", "catalog_num" };
+    
+    public static final String[] CAPTCHA_TYPES = new String[] { "2chaptcha", "Google Recaptcha 2", "Google Recaptcha 2 (fallback)", "Mail.ru NOCAPTCHA" };
+    public static final String[] CAPTCHA_TYPES_KEYS = new String[] { "2chaptcha", "recaptcha", "recaptcha-fallback", "mailru" };
+    public static final String CAPTCHA_TYPE_DEFAULT = "recaptcha";
+    
+    public static final int CAPTCHA_2CHAPTCHA = 1;
+    public static final int CAPTCHA_RECAPTCHA = 2;
+    public static final int CAPTCHA_RECAPTCHA_FALLBACK = 3;
+    public static final int CAPTCHA_MAILRU = 4;
+    public static final int CAPTCHA_DISABLED = 5;
     
     public static final String PREF_KEY_MOBILE_API = "mobile_api";
     public static final String PREF_KEY_USE_HTTPS_MAKABA = "use_https";
     public static final String PREF_KEY_DOMAIN = "domain";
+    public static final String PREF_KEY_CAPTCHA_TYPE = "captcha_type";
     public static final String PREF_KEY_USERCODE_COOKIE_DOMAIN = "usercode_domain";
     public static final String PREF_KEY_USERCODE_COOKIE_VALUE = "usercode_cookie";
-    
+
+    public static final String MAILRU_JS_URL = "https://api-nocaptcha.mail.ru/captcha?public_key=";
+    public static final Pattern MAILRU_ID_PATTERN = Pattern.compile("id:\\s*\"([^\"]*)\"");
+    public static final Pattern MAILRU_URL_PATTERN = Pattern.compile("url:\\s*\"([^\"]*)\"");
+    public static final String MAILRU_DEFAULT_CAPTCHA_URL = "https://api-nocaptcha.mail.ru/c/1";
+
     public static final String USERCODE_COOKIE_NAME = "usercode_auth";
 }

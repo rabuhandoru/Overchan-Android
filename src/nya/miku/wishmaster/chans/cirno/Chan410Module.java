@@ -31,7 +31,6 @@ import cz.msebera.android.httpclient.client.entity.UrlEncodedFormEntity;
 import cz.msebera.android.httpclient.cookie.Cookie;
 import cz.msebera.android.httpclient.impl.cookie.BasicClientCookie;
 import cz.msebera.android.httpclient.message.BasicNameValuePair;
-
 import android.content.SharedPreferences;
 import android.content.res.Resources;
 import android.graphics.drawable.Drawable;
@@ -105,7 +104,8 @@ public class Chan410Module extends AbstractChanModule {
                     BasicClientCookie c = new BasicClientCookie(board, value);
                     c.setDomain(CHAN410_DOMAIN);
                     c.setPath("/");
-                    c.setExpiryDate(new Date(cookie.optLong("expires")));
+                    long expiry = cookie.optLong("expires");
+                    c.setExpiryDate(expiry > 0 ? new Date(expiry) : null);
                     httpClient.getCookieStore().addCookie(c);
                 }
             }
@@ -117,10 +117,12 @@ public class Chan410Module extends AbstractChanModule {
         List<Cookie> cookies = httpClient.getCookieStore().getCookies();
         for (Cookie cookie : cookies) {
             if (cookie.getName().length() <= 3 && Chan410Boards.ALL_BOARDS_SET.contains(cookie.getName())) {
-                JSONObject cookieValues = new JSONObject();
-                cookieValues.put("value", cookie.getValue());
-                cookieValues.put("expires", cookie.getExpiryDate().getTime());
-                savedCookies.put(cookie.getName(), cookieValues);
+                JSONObject cookieAttributes = new JSONObject();
+                cookieAttributes.put("value", cookie.getValue());
+                if (cookie.getExpiryDate() != null) {
+                    cookieAttributes.put("expires", cookie.getExpiryDate().getTime());
+                }
+                savedCookies.put(cookie.getName(), cookieAttributes);
             }
         }
         preferences.edit().putString(getSharedKey(PREF_KEY_FAPTCHA_COOKIES), savedCookies.toString()).commit();
@@ -266,8 +268,10 @@ public class Chan410Module extends AbstractChanModule {
             if (response.statusCode == 302) {
                 for (Header header : response.headers) {
                     if (header != null && HttpHeaders.LOCATION.equalsIgnoreCase(header.getName())) {
-                        if (header.getValue().trim().length() == 0) throw new Exception();
-                        return fixRelativeUrl(header.getValue());
+                        String redirectUrl = header.getValue().trim();
+                        if (redirectUrl.length() == 0) throw new Exception();
+                        if (redirectUrl.contains("banned.php")) throw new Exception("Вы забанены");
+                        return fixRelativeUrl(redirectUrl);
                     }
                 }
             } else if (response.statusCode == 200) {

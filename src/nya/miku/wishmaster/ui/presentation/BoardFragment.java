@@ -160,7 +160,8 @@ public class BoardFragment extends Fragment implements AdapterView.OnItemClickLi
     
     public static final String BROADCAST_PAGE_LOADED = "nya.miku.wishmaster.BROADCAST_ACTION_PAGE_LOADED";
     
-    public static View lastFocusedView = null;
+    public static String lastSelectedQuote = null;
+    public static int lastFocusedItemIndex = -1;
     
     private boolean isFailInstance = false;
     
@@ -1578,7 +1579,7 @@ public class BoardFragment extends Fragment implements AdapterView.OnItemClickLi
     }
     
     public Intent setIntentExtras(Intent sendIntent) {
-        return adapter.setIntentExtras(lastFocusedView, sendIntent);
+        return adapter.setIntentExtras(sendIntent);
     }
     
     private static class PostsListAdapter extends ArrayAdapter<PresentationItemModel> {
@@ -1686,8 +1687,8 @@ public class BoardFragment extends Fragment implements AdapterView.OnItemClickLi
             public boolean unreadFrameIsVisible = false;
             
             public JellyBeanSpanFixTextView headerView;
-            public TextView stickyClosedThreadView;
-            public boolean stickyClosedThreadIsVisible = false;
+            public TextView threadConditionView;
+            public boolean threadConditionIsVisible = false;
             public View deletedPostView;
             public boolean deletedPostViewIsVisible = false;
             public TextView dateView;
@@ -1720,20 +1721,18 @@ public class BoardFragment extends Fragment implements AdapterView.OnItemClickLi
             public TextView postsCountView;
             public boolean postsCountIsVisible = false;
         }
-        
-        public Intent setIntentExtras(View v, Intent sendIntent) {
-            if (v == null) return sendIntent;
-            Object tag = v.getTag();
-            if ((tag != null) && (tag instanceof PostViewTag)) {
-                String quote = getSelectedText((PostViewTag) tag);
+
+        public Intent setIntentExtras(Intent sendIntent) {
+            if ((lastSelectedQuote != null) && (lastFocusedItemIndex >= 0)) {
                 SendPostModel sendReplyModel = fragment().getSendPostModel();
                 sendReplyModel.password = null;
-                PresentationItemModel item = fragment().adapter.getItem(((PostViewTag) tag).position);
+                PresentationItemModel item = fragment().adapter.getItem(lastFocusedItemIndex);
+                if (item == null) return sendIntent;
                 String postNumber = item.sourceModel.number;
                 MainApplication instance = MainApplication.getInstance();
                 ChanModule chan = instance.getChanModule(sendReplyModel.chanName);
                 UrlPageModel model = new UrlPageModel();
-                model.type = model.TYPE_THREADPAGE;
+                model.type = UrlPageModel.TYPE_THREADPAGE;
                 model.chanName = sendReplyModel.chanName;
                 model.boardName = sendReplyModel.boardName;
                 model.threadNumber = sendReplyModel.threadNumber;
@@ -1741,10 +1740,12 @@ public class BoardFragment extends Fragment implements AdapterView.OnItemClickLi
                 String postURI = chan.buildUrl(model);
                 Bundle bundle = new Bundle();
                 bundle.putSerializable(fragment().getString(R.string.intent_overchan_send_post_model), sendReplyModel);
-                bundle.putString(fragment().getString(R.string.intent_overchan_quote_text), quote);
+                bundle.putString(fragment().getString(R.string.intent_overchan_quote_text), lastSelectedQuote);
                 bundle.putString(fragment().getString(R.string.intent_overchan_post_number), postNumber);
                 bundle.putString(fragment().getString(R.string.intent_overchan_post_uri), postURI);
                 sendIntent.putExtra(fragment().getString(R.string.intent_overchan_extras), bundle);
+                lastSelectedQuote = null;
+                lastFocusedItemIndex = -1;
             }
             return sendIntent;
         }
@@ -1906,7 +1907,7 @@ public class BoardFragment extends Fragment implements AdapterView.OnItemClickLi
                 tag.unreadFrame.setOnClickListener(onUnreadFrameListener);
                 tag.unreadFrame.setOnLongClickListener(onUnreadFrameListener);
                 tag.headerView = (JellyBeanSpanFixTextView) view.findViewById(R.id.post_header);
-                tag.stickyClosedThreadView = (TextView) view.findViewById(R.id.post_sticky_closed_thread);
+                tag.threadConditionView = (TextView) view.findViewById(R.id.post_thread_condition);
                 tag.deletedPostView = view.findViewById(R.id.post_deleted_mark);
                 tag.dateView = (TextView) view.findViewById(R.id.post_date);
                 tag.badgeViewContainer = (LinearLayout) view.findViewById(R.id.post_badge_container);
@@ -1923,7 +1924,8 @@ public class BoardFragment extends Fragment implements AdapterView.OnItemClickLi
                 tag.commentView.setOnFocusChangeListener(new View.OnFocusChangeListener() {
                     @Override
                     public void onFocusChange(View v, boolean hasFocus) {
-                        if (hasFocus) lastFocusedView = view;
+                        lastSelectedQuote = getSelectedText(tag);
+                        lastFocusedItemIndex = tag.position;
                     }
                 });
                 tag.showFullTextView = (TextView) view.findViewById(R.id.post_show_full_text);
@@ -2251,16 +2253,16 @@ public class BoardFragment extends Fragment implements AdapterView.OnItemClickLi
                         tag.postsCountIsVisible = false;
                     }
                 }
-                if (model.stickyClosedString != null) {
-                    tag.stickyClosedThreadView.setText(model.stickyClosedString);
-                    if (!tag.stickyClosedThreadIsVisible) {
-                        tag.stickyClosedThreadView.setVisibility(View.VISIBLE);
-                        tag.stickyClosedThreadIsVisible = true;
+                if (model.threadConditionString != null) {
+                    tag.threadConditionView.setText(model.threadConditionString);
+                    if (!tag.threadConditionIsVisible) {
+                        tag.threadConditionView.setVisibility(View.VISIBLE);
+                        tag.threadConditionIsVisible = true;
                     }
                 } else {
-                    if (tag.stickyClosedThreadIsVisible) {
-                        tag.stickyClosedThreadView.setVisibility(View.GONE);
-                        tag.stickyClosedThreadIsVisible = false;
+                    if (tag.threadConditionIsVisible) {
+                        tag.threadConditionView.setVisibility(View.GONE);
+                        tag.threadConditionIsVisible = false;
                     }
                 }
             }

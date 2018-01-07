@@ -83,7 +83,7 @@ public class HorochanModule extends CloudflareChanModule {
     
     private static final Pattern COMMENT_LINK = Pattern.compile("<a href=\"/(\\d+)\">");
     
-    private static final String[] ATTACHMENT_FORMATS = new String[] { "gif", "jpg", "jpeg", "png", "bmp", "webm" };
+    private static final String[] ATTACHMENT_FORMATS = new String[] { "gif", "jpg", "jpeg", "png", "bmp", "webm", "mp4", "mp3" };
     
     private Map<String, String> boardNames = null;
     private Map<String, Integer> boardPagesCount = null;
@@ -120,8 +120,12 @@ public class HorochanModule extends CloudflareChanModule {
         return (useHttps() ? "https://" : "http://") + (api ? "api." : "") + DOMAIN + "/";
     }
     
-    private String getStaticUrl() {
-        return (useHttps() ? "https://" : "http://") + "static." + DOMAIN + "/";
+    private String getStaticUrl(String storage) {
+        return (useHttps() ? "https://" : "http://") + storage + "." + DOMAIN + "/";
+    }
+
+    private String getAssetsUrl(String extension) {
+        return (useHttps() ? "https://" : "http://") + DOMAIN + "/assets/img/placeholder_" + extension + ".png";
     }
     
     @Override
@@ -209,21 +213,33 @@ public class HorochanModule extends CloudflareChanModule {
                 JSONObject file = files.getJSONObject(i);
                 String name = file.optString("name");
                 String ext = file.optString("ext");
+                String storage = file.optString("storage");
                 model.attachments[i] = new AttachmentModel();
-                model.attachments[i].path = getStaticUrl() + "src/" + name + "." + ext;
-                model.attachments[i].thumbnail = getStaticUrl() + "thumb/t" + name + ".jpeg";
                 model.attachments[i].size = file.optInt("size", -1);
                 if (model.attachments[i].size > 0) model.attachments[i].size = Math.round(model.attachments[i].size / 1024f);
                 model.attachments[i].width = file.optInt("width", -1);
                 model.attachments[i].height = file.optInt("height", -1);
-                if (ext.equalsIgnoreCase("gif")) {
-                    model.attachments[i].type = AttachmentModel.TYPE_IMAGE_GIF;
-                }
-                else if (ext.equalsIgnoreCase("webm")) {
-                    model.attachments[i].type = AttachmentModel.TYPE_VIDEO;
+                model.attachments[i].path = getStaticUrl(storage) + "src/" + name + "." + ext;
+                if (file.optInt("has_thumb") == 1) {
+                    model.attachments[i].thumbnail = getStaticUrl(storage) + "thumb/t" + name + ".jpeg";
                 }
                 else {
-                    model.attachments[i].type = AttachmentModel.TYPE_IMAGE_STATIC;
+                    model.attachments[i].thumbnail = getAssetsUrl(ext);
+                }
+                switch (ext) {
+                    case "gif":
+                        model.attachments[i].type = AttachmentModel.TYPE_IMAGE_GIF;
+                        break;
+                    case "webm":
+                    case "mp4":
+                        model.attachments[i].type = AttachmentModel.TYPE_VIDEO;
+                        break;
+                    case "mp3":
+                        model.attachments[i].type = AttachmentModel.TYPE_AUDIO;
+                        break;
+                    default:
+                        model.attachments[i].type = AttachmentModel.TYPE_IMAGE_STATIC;
+                        break;
                 }
             }
         }

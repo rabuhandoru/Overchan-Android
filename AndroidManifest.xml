@@ -130,6 +130,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
                 
                 <data android:host="krautchan.net" />
                 <data android:host="www.krautchan.net" />
+                <data android:host="beta.krautchan.net" />
                 
                 <data android:host="7chan.org" />
                 
@@ -189,6 +190,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
                 <data android:host="www.arhivach.org" />
                 <data android:host="arhivachovtj2jrp.onion" />
                 <data android:host="www.arhivachovtj2jrp.onion" />
+                
+                <data android:host="tbpchan.net" />
+                <data android:host="www.tbpchan.net" />
                 <!-- end of domains -->
             </intent-filter>
             <intent-filter>

@@ -139,6 +139,9 @@ public class ShareActivity extends ListActivity {
         if (bundle != null) {
             sendReplyModel = (SendPostModel) bundle.getSerializable(getString(R.string.intent_overchan_send_post_model));
             quote = bundle.getString(getString(R.string.intent_overchan_quote_text));
+            if (quote == null || quote.length() == 0) {
+                quote = intent.getStringExtra(Intent.EXTRA_TEXT);
+            }
             postNumber = bundle.getString(getString(R.string.intent_overchan_post_number));
             postURI = bundle.getString(getString(R.string.intent_overchan_post_uri));
         } else {

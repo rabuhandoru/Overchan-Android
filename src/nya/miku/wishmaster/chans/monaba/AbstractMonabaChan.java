@@ -253,17 +253,16 @@ public abstract class AbstractMonabaChan extends CloudflareChanModule {
     @Override
     public String buildUrl(UrlPageModel model) throws IllegalArgumentException {
         if (!model.chanName.equals(getChanName())) throw new IllegalArgumentException("wrong chan");
+        if (model.boardName != null && !model.boardName.matches("\\w*")) throw new IllegalArgumentException("wrong board name");
         StringBuilder url = new StringBuilder(getUsingUrl());
         switch (model.type) {
             case UrlPageModel.TYPE_INDEXPAGE:
                 break;
             case UrlPageModel.TYPE_BOARDPAGE:
-                if (model.boardName.isEmpty()) throw new IllegalArgumentException("wrong board name");
                 url.append(model.boardName);
                 if (model.boardPage > 0) url.append("/page/").append(model.boardPage);
                 break;
             case UrlPageModel.TYPE_THREADPAGE:
-                if (model.boardName.isEmpty()) throw new IllegalArgumentException("wrong board name");
                 url.append(model.boardName).append("/").append(model.threadNumber);
                 if (model.postNumber != null && model.postNumber.length() > 0) url.append("#").append(model.postNumber);
                 break;
