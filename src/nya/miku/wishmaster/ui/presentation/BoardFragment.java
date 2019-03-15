@@ -372,7 +372,7 @@ public class BoardFragment extends Fragment implements AdapterView.OnItemClickLi
                     setPullableNoRefreshing();
                     openFromChan();
                 } else {
-                    update(true, false, false);
+                    update(true, false, false, false);
                 }
             }
         });
@@ -386,7 +386,7 @@ public class BoardFragment extends Fragment implements AdapterView.OnItemClickLi
         activity.setTitle(tabModel.title);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.ICE_CREAM_SANDWICH)
             CompatibilityImpl.setActionBarCustomFavicon(activity, chan.getChanFavicon());
-        update(forceUpdateFirstTime, false, false);
+        update(forceUpdateFirstTime, false, false, false);
         return rootView;
     }
     
@@ -468,6 +468,7 @@ public class BoardFragment extends Fragment implements AdapterView.OnItemClickLi
                 ic_menu_slideshow);
         menu.add(Menu.NONE, R.id.menu_quickaccess_add, 107, resources.getString(R.string.menu_quickaccess_add)).setIcon(R.drawable.
                 ic_menu_add_bookmark);
+        menu.add(Menu.NONE, R.id.menu_reload_thread, 108, resources.getString(R.string.menu_reload_thread)).setIcon(R.drawable.ic_menu_refresh);
         this.menu = menu;
         updateMenu();
     }
@@ -482,6 +483,7 @@ public class BoardFragment extends Fragment implements AdapterView.OnItemClickLi
             boolean savePageMenuVisible = false;
             boolean boardGallryMenuVisible = false;
             boolean quickaccessAddMenuVisible = false;
+            boolean reloadThreadMenuVisible = false;
             if (tabModel.type != TabModel.TYPE_LOCAL && pageType != TYPE_SEARCHLIST && listLoaded &&
                     !presentationModel.source.boardModel.readonlyBoard) {
                 addPostMenuVisible = true;
@@ -518,6 +520,7 @@ public class BoardFragment extends Fragment implements AdapterView.OnItemClickLi
             }
             if (tabModel.type != TabModel.TYPE_LOCAL && pageType == TYPE_POSTSLIST && listLoaded) {
                 savePageMenuVisible = true;
+                reloadThreadMenuVisible = true;
             }
             menu.findItem(R.id.menu_add_post).setVisible(addPostMenuVisible);
             menu.findItem(R.id.menu_update).setVisible(updateMenuVisible);
@@ -526,6 +529,7 @@ public class BoardFragment extends Fragment implements AdapterView.OnItemClickLi
             menu.findItem(R.id.menu_save_page).setVisible(savePageMenuVisible);
             menu.findItem(R.id.menu_board_gallery).setVisible(boardGallryMenuVisible);
             menu.findItem(R.id.menu_quickaccess_add).setVisible(quickaccessAddMenuVisible);
+            menu.findItem(R.id.menu_reload_thread).setVisible(reloadThreadMenuVisible);
         } catch (NullPointerException e) {
             Logger.e(TAG, e);
         }
@@ -573,6 +577,9 @@ public class BoardFragment extends Fragment implements AdapterView.OnItemClickLi
                 QuickAccess.saveQuickAccessToPreferences(quickaccessList);
                 enableQuickAccessMenu = Boolean.FALSE;
                 item.setVisible(false);
+                return true;
+            case R.id.menu_reload_thread:
+                updateFromScratch();
                 return true;
         }
         return super.onOptionsItemSelected(item);
@@ -1125,13 +1132,15 @@ public class BoardFragment extends Fragment implements AdapterView.OnItemClickLi
     
     private class PageGetter extends CancellableTask.BaseCancellableTask implements Runnable {
         private final boolean forceUpdate;
+        private final boolean forceFromScratch;
         private final boolean silent;
         
         private PageLoaderFromChan pageLoader = null;
         private final boolean isThreadPage;
         
-        public PageGetter(boolean forceUpdate, boolean silent) {
+        public PageGetter(boolean forceUpdate, boolean forceFromScratch, boolean silent) {
             this.forceUpdate = forceUpdate;
+            this.forceFromScratch = forceFromScratch;
             this.silent = silent;
             isThreadPage = pageType == TYPE_POSTSLIST;
         }
@@ -1198,20 +1207,20 @@ public class BoardFragment extends Fragment implements AdapterView.OnItemClickLi
                     if (pageFromFileCache != null) {
                         createPresentationModel(pageFromFileCache, forceUpdate, false);
                     } else {
-                        loadFromChan();
+                        loadFromChan(forceFromScratch);
                     }
                 }
             } else if (forceUpdate) {
-                loadFromChan();
+                loadFromChan(forceFromScratch);
             }
             
         }
         
         /** после загрузки с чана отправляет на ListView */
-        private void loadFromChan() {
+        private void loadFromChan(boolean forceFromScratch) {
             final SerializablePage pageFromChan;
             final boolean fromScratch;
-            if (presentationModel != null && presentationModel.source != null) {
+            if (!forceFromScratch && presentationModel != null && presentationModel.source != null) {
                 pageFromChan = presentationModel.source;
                 fromScratch = false;
             } else {
@@ -1232,6 +1241,7 @@ public class BoardFragment extends Fragment implements AdapterView.OnItemClickLi
                     if (isCancelled()) return;
                     if (fromScratch) {
                         createPresentationModel(pageFromChan, false, true);
+                        resetFirstUnreadPosition();
                     } else {
                         presentationModel.updateViewModels(isThreadPage, PageGetter.this, new PresentationModel.RebuildCallback() {
                             @Override
@@ -1344,7 +1354,7 @@ public class BoardFragment extends Fragment implements AdapterView.OnItemClickLi
                         return;
                     }
                     e.handle(activity, PageGetter.this, new InteractiveException.Callback() {
-                        @Override public void onSuccess() { updatingNow = false; update(true, false, false); }
+                        @Override public void onSuccess() { updatingNow = false; update(true, false, false, false); }
                         @Override public void onError(String message) { updatingNow = false; switchToErrorView(message); }
                     });
                 }
@@ -1541,7 +1551,7 @@ public class BoardFragment extends Fragment implements AdapterView.OnItemClickLi
                         AppearanceUtils.callWhenLoaded(pullableLayout, new Runnable() {
                             @Override
                             public void run() {
-                                update(true, true, silent);
+                                update(true, false, true, silent);
                             }
                         });
                     }
@@ -2518,9 +2528,16 @@ public class BoardFragment extends Fragment implements AdapterView.OnItemClickLi
      * Обновить страницу
      */
     public void update() {
-       update(true, true, false); 
+       update(true, false, true, false);
     }
     
+    /**
+     * Перезагрузить страницу из Интернета, даже если она есть в кеше
+     */
+    public void updateFromScratch() {
+       update(true, true, false, false);
+    }
+
     /**
      * Обновить страницу, без вывода всплывающего уведомления
      */
@@ -2530,17 +2547,18 @@ public class BoardFragment extends Fragment implements AdapterView.OnItemClickLi
         } else if (updatingNow) {
             Logger.d(TAG, "already updating now");
         } else {
-            update(true, true, true);
+            update(true, false, true, true);
         }
     }
     
     /**
      * Загрузить или обновить страницу
      * @param forceUpdate нужно ли обновлять страницу из интернета, если её версия уже есть в кэше
+     * @param forceFromScratch нужно ли целиком перезагружать страницу из интернета, если её версия уже есть в кэше
      * @param setRefreshingLayout установить обновление pullableLayout, вызывает {@link SwipeRefreshLayout#setRefreshing(boolean)}
      * @param silent не выводить уведомление (Toast) после обновления
      */
-    private void update(boolean forceUpdate, boolean setRefreshingLayout, boolean silent) {
+    private void update(boolean forceUpdate, boolean forceFromScratch, boolean setRefreshingLayout, boolean silent) {
         if (currentTask != null) {
             currentTask.cancel();
         }
@@ -2551,7 +2569,7 @@ public class BoardFragment extends Fragment implements AdapterView.OnItemClickLi
         } else {
             switchToLoadingView();
         }
-        PageGetter pageGetter = new PageGetter(forceUpdate, silent);
+        PageGetter pageGetter = new PageGetter(forceUpdate, forceFromScratch, silent);
         currentTask = pageGetter;
         if (listLoaded) {
             Async.runAsync(pageGetter);
