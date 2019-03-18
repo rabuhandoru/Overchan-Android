@@ -3156,6 +3156,8 @@ public class BoardFragment extends Fragment implements AdapterView.OnItemClickLi
                     } else {
                         dialog.getWindow().clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND);
                     }
+                } else {
+                    dialog.getWindow().setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
                 }
                 dialog.show();
                 dialogs.add(dialog);
