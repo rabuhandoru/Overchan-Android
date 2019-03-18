@@ -1217,7 +1217,7 @@ public class BoardFragment extends Fragment implements AdapterView.OnItemClickLi
         }
         
         /** после загрузки с чана отправляет на ListView */
-        private void loadFromChan(boolean forceFromScratch) {
+        private void loadFromChan(final boolean forceFromScratch) {
             final SerializablePage pageFromChan;
             final boolean fromScratch;
             if (!forceFromScratch && presentationModel != null && presentationModel.source != null) {
@@ -1239,9 +1239,32 @@ public class BoardFragment extends Fragment implements AdapterView.OnItemClickLi
                     BackgroundThumbDownloader.download(pageFromChan, imagesDownloadTask);
                     MainApplication.getInstance().subscriptions.checkOwnPost(pageFromChan, itemsCountBefore);
                     if (isCancelled()) return;
-                    if (fromScratch) {
+                    if (forceFromScratch) {
+                        View v = listView.getChildAt(0);
+                        final String num = adapter.getItem(listView.getPositionForView(v)).sourceModel.number;
+                        final int top = v.getTop();
                         createPresentationModel(pageFromChan, false, true);
                         resetFirstUnreadPosition();
+                        listView.post(new Runnable() {
+                            @Override
+                            public void run() {
+                                int pos = 0;
+                                for (int i = 0; i < presentationModel.presentationList.size(); ++i) {
+                                    if (presentationModel.presentationList.get(i).sourceModel.number.equals(num)) {
+                                        pos = i;
+                                        break;
+                                    }
+                                }
+                                hackListViewSetPosition(listView, pos, top);
+                                setPullableNoRefreshing();
+                                if (!silent) {
+                                    String notification = resources.getString(R.string.postslist_list_updated);
+                                    Toast.makeText(activity, notification, Toast.LENGTH_LONG).show();
+                                }
+                            }
+                        });
+                    } else if (fromScratch) {
+                        createPresentationModel(pageFromChan, false, true);
                     } else {
                         presentationModel.updateViewModels(isThreadPage, PageGetter.this, new PresentationModel.RebuildCallback() {
                             @Override
@@ -2535,7 +2558,7 @@ public class BoardFragment extends Fragment implements AdapterView.OnItemClickLi
      * Перезагрузить страницу из Интернета, даже если она есть в кеше
      */
     public void updateFromScratch() {
-       update(true, true, false, false);
+       update(true, true, true, false);
     }
 
     /**
