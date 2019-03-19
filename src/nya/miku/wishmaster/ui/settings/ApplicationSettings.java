@@ -555,4 +555,9 @@ public class ApplicationSettings {
         int result = (int) (resources.getDimensionPixelSize(R.dimen.post_thumbnail_size) * scale);
         return result;
     }    
+
+    public boolean getWidePopupDialogs(){
+        return preferences.getBoolean(resources.getString(R.string.pref_key_wide_popup_dialogs), false);
+    }
+
 }
