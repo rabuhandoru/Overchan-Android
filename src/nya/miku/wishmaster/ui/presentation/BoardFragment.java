@@ -1242,6 +1242,7 @@ public class BoardFragment extends Fragment implements AdapterView.OnItemClickLi
                     if (forceFromScratch) {
                         View v = listView.getChildAt(0);
                         final String num = adapter.getItem(listView.getPositionForView(v)).sourceModel.number;
+                        final long timestamp = adapter.getItem(listView.getPositionForView(v)).sourceModel.timestamp;
                         final int top = v.getTop();
                         createPresentationModel(pageFromChan, false, true);
                         resetFirstUnreadPosition();
@@ -1250,7 +1251,8 @@ public class BoardFragment extends Fragment implements AdapterView.OnItemClickLi
                             public void run() {
                                 int pos = 0;
                                 for (int i = 0; i < presentationModel.presentationList.size(); ++i) {
-                                    if (presentationModel.presentationList.get(i).sourceModel.number.equals(num)) {
+                                    if (presentationModel.presentationList.get(i).sourceModel.number.equals(num) ||
+                                        presentationModel.presentationList.get(i).sourceModel.timestamp > timestamp) {
                                         pos = i;
                                         break;
                                     }
