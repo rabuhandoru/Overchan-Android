@@ -1207,17 +1207,17 @@ public class BoardFragment extends Fragment implements AdapterView.OnItemClickLi
                     if (pageFromFileCache != null) {
                         createPresentationModel(pageFromFileCache, forceUpdate, false);
                     } else {
-                        loadFromChan(forceFromScratch);
+                        loadFromChan();
                     }
                 }
             } else if (forceUpdate) {
-                loadFromChan(forceFromScratch);
+                loadFromChan();
             }
             
         }
         
         /** после загрузки с чана отправляет на ListView */
-        private void loadFromChan(final boolean forceFromScratch) {
+        private void loadFromChan() {
             final SerializablePage pageFromChan;
             final boolean fromScratch;
             if (!forceFromScratch && presentationModel != null && presentationModel.source != null) {
