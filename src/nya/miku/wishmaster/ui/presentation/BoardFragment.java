@@ -3267,6 +3267,7 @@ public class BoardFragment extends Fragment implements AdapterView.OnItemClickLi
                 dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
                 dialog.setCanceledOnTouchOutside(true);
                 dialog.setContentView(dlgList);
+                dialog.getWindow().setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
                 dialog.show();
                 dialogs.add(dialog);
             }
@@ -3354,6 +3355,7 @@ public class BoardFragment extends Fragment implements AdapterView.OnItemClickLi
                 dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
                 dialog.setCanceledOnTouchOutside(true);
                 dialog.setContentView(dlgList);
+                dialog.getWindow().setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
                 dialog.show();
                 dialogs.add(dialog);
             }
