@@ -3157,7 +3157,9 @@ public class BoardFragment extends Fragment implements AdapterView.OnItemClickLi
                         dialog.getWindow().clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND);
                     }
                 } else {
-                    dialog.getWindow().setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                    if (settings.getWidePopupDialogs()) {
+                        dialog.getWindow().setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                    }
                 }
                 dialog.show();
                 dialogs.add(dialog);
@@ -3267,7 +3269,9 @@ public class BoardFragment extends Fragment implements AdapterView.OnItemClickLi
                 dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
                 dialog.setCanceledOnTouchOutside(true);
                 dialog.setContentView(dlgList);
-                dialog.getWindow().setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                if (settings.getWidePopupDialogs()) {
+                    dialog.getWindow().setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                }
                 dialog.show();
                 dialogs.add(dialog);
             }
@@ -3355,7 +3359,9 @@ public class BoardFragment extends Fragment implements AdapterView.OnItemClickLi
                 dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
                 dialog.setCanceledOnTouchOutside(true);
                 dialog.setContentView(dlgList);
-                dialog.getWindow().setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                if (settings.getWidePopupDialogs()) {
+                    dialog.getWindow().setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                }
                 dialog.show();
                 dialogs.add(dialog);
             }
