@@ -209,7 +209,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
         <item name="materialPrimary">#212121</item>
         <item name="materialPrimaryDark">#000000</item>
         <item name="android:textColorPrimary">#698CC0</item>
-        <item name="android:textColorSecondary">#D2D2D2</item>
+        <item name="android:textColorSecondary">#698CC0</item>
         <item name="activityRootBackground">#212121</item>
         <item name="sidebarBackground">#CC212121</item>
         <item name="sidebarSelectedItem">@drawable/sidebar_selected_neutron</item>
