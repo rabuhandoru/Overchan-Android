@@ -1250,14 +1250,18 @@ public class BoardFragment extends Fragment implements AdapterView.OnItemClickLi
                             @Override
                             public void run() {
                                 int pos = 0;
+                                boolean deleted = false;
                                 for (int i = 0; i < presentationModel.presentationList.size(); ++i) {
-                                    if (presentationModel.presentationList.get(i).sourceModel.number.equals(num) ||
-                                        presentationModel.presentationList.get(i).sourceModel.timestamp > timestamp) {
+                                    if (presentationModel.presentationList.get(i).sourceModel.number.equals(num)) {
+                                        pos = i;
+                                        break;
+                                    } else if (presentationModel.presentationList.get(i).sourceModel.timestamp > timestamp) {
+                                        deleted = true;
                                         pos = i;
                                         break;
                                     }
                                 }
-                                hackListViewSetPosition(listView, pos, top);
+                                hackListViewSetPosition(listView, pos, deleted ? 0 : top);
                                 setPullableNoRefreshing();
                                 if (!silent) {
                                     String notification = resources.getString(R.string.postslist_list_updated);
