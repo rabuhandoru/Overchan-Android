@@ -16,8 +16,10 @@ import android.graphics.Path;
 import android.graphics.PixelFormat;
 import android.graphics.Rect;
 import android.graphics.drawable.Drawable;
+import android.util.SparseIntArray;
 import android.util.TypedValue;
 //import android.support.v7.appcompat.R;
+import nya.miku.wishmaster.common.MainApplication;
 import nya.miku.wishmaster.ui.CompatibilityUtils;
 
 /**
@@ -70,20 +72,24 @@ abstract class DrawerArrowDrawable extends Drawable {
         mMiddleArrowSize = typedArray
                 .getDimension(R.styleable.DrawerArrowToggle_middleBarArrowSize, 0);
         typedArray.recycle();*/
-        
-        TypedValue typedValue = new TypedValue();
-        context.getTheme().resolveAttribute(android.R.attr.textColorPrimary, typedValue, true);
+
         int color;
-        if (typedValue.type >= TypedValue.TYPE_FIRST_COLOR_INT && typedValue.type <= TypedValue.TYPE_LAST_COLOR_INT) {
-            color = typedValue.data;
+        SparseIntArray attrs = MainApplication.getInstance().settings.getTheme().customAttrs;
+        if (attrs != null && attrs.indexOfKey(android.R.attr.textColorPrimary) >= 0) {
+            color = attrs.get(android.R.attr.textColorPrimary);
         } else {
-            try {
-                color = CompatibilityUtils.getColor(context.getResources(), typedValue.resourceId);
-            } catch (Exception e) {
-                color = 0;
+            TypedValue typedValue = new TypedValue();
+            context.getTheme().resolveAttribute(android.R.attr.textColorPrimary, typedValue, true);
+            if (typedValue.type >= TypedValue.TYPE_FIRST_COLOR_INT && typedValue.type <= TypedValue.TYPE_LAST_COLOR_INT) {
+                color = typedValue.data;
+            } else {
+                try {
+                    color = CompatibilityUtils.getColor(context.getResources(), typedValue.resourceId);
+                } catch (Exception e) {
+                    color = 0;
+                }
             }
         }
-        
         mPaint.setAntiAlias(true);
         mPaint.setColor(color);
         mSize = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 24.0f, context.getResources().getDisplayMetrics());
