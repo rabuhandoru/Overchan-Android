@@ -136,15 +136,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
         <item name="android:textAppearanceLarge">@style/TextAppearance_Huge.Large</item>
     </style>
     
-    <style name="Custom_Theme_Light">
-        <item name="android:textColorPrimary">#000001</item>
-        <item name="android:textColorSecondary">#000001</item>
-    </style>
-    
-    <style name="Custom_Theme_Dark">
-        <item name="android:textColorPrimary">#FFFFFE</item>
-        <item name="android:textColorSecondary">#FFFFFE</item>
-    </style>
+	<style name="Custom_Theme_Light"/>
+	<style name="Custom_Theme_Dark"/>
     
     <!-- Themes -->
     

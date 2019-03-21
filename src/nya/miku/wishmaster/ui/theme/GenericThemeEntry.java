@@ -32,8 +32,8 @@ import nya.miku.wishmaster.common.Logger;
 import nya.miku.wishmaster.lib.org_json.JSONObject;
 
 public class GenericThemeEntry implements Parcelable {
-    private static final int BASE_THEME_LIGHT = R.style.Theme_Futaba;
-    private static final int BASE_THEME_DARK = R.style.Theme_Neutron;
+    private static final int BASE_THEME_LIGHT = R.style.Theme_Photon;
+    private static final int BASE_THEME_DARK = R.style.Theme_Tomorrow;
     
     private static GenericThemeEntry cachedInstance = null;
     private static String cachedJsonString = null;
