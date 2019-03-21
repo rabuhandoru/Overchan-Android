@@ -163,6 +163,7 @@ public class GenericThemeEntry implements Parcelable {
         for (int i=0, size=customAttrs.size(); i<size; ++i) {
             switch (customAttrs.keyAt(i)) {
                 case android.R.attr.textColorPrimary: theme.put("textColorPrimary", colorToString(customAttrs.valueAt(i))); break;
+                case android.R.attr.textColorSecondary: theme.put("textColorSecondary", colorToString(customAttrs.valueAt(i))); break;
                 case R.attr.materialPrimary: theme.put("materialPrimary", colorToString(customAttrs.valueAt(i))); break;
                 case R.attr.materialPrimaryDark: theme.put("materialPrimaryDark", colorToString(customAttrs.valueAt(i))); break;
                 case R.attr.materialNavigationBar: theme.put("materialNavigationBar", colorToString(customAttrs.valueAt(i))); break;
@@ -210,6 +211,7 @@ public class GenericThemeEntry implements Parcelable {
                     }
                     break;
                 case "textcolorprimary": parseColor(key, theme.getString(key), android.R.attr.textColorPrimary, attrs); break;
+                case "textcolorsecondary": parseColor(key, theme.getString(key), android.R.attr.textColorSecondary, attrs); break;
                 case "materialprimary": parseColor(key, theme.getString(key), R.attr.materialPrimary, attrs); break;
                 case "materialprimarydark": parseColor(key, theme.getString(key), R.attr.materialPrimaryDark, attrs); break;
                 case "materialnavigationbar": parseColor(key, theme.getString(key), R.attr.materialNavigationBar, attrs); break;
