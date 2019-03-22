@@ -145,8 +145,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
         <item name="materialPrimary">#FFFFEE</item>
         <item name="materialPrimaryDark">#7F7F75</item>
         <item name="android:textColorPrimary">#800000</item>
-        <item name="android:textColorSecondary">#800000</item>
+        <item name="android:textColorSecondary">#666666</item>
         <item name="activityRootBackground">#FFFFEE</item>
+        <item name="sidebarForeground">#800000</item>
         <item name="sidebarBackground">#CCFFFFEE</item>
         <item name="sidebarSelectedItem">@drawable/sidebar_selected_futaba</item>
         <item name="listSeparatorBackground">#F0E0D6</item>
@@ -175,8 +176,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
         <item name="materialPrimary">#EEEEEE</item>
         <item name="materialPrimaryDark">#757575</item>
         <item name="android:textColorPrimary">#333333</item>
-        <item name="android:textColorSecondary">#333333</item>
+        <item name="android:textColorSecondary">#666666</item>
         <item name="activityRootBackground">#EEEEEE</item>
+        <item name="sidebarForeground">#333333</item>
         <item name="sidebarBackground">#CCEEEEEE</item>
         <item name="sidebarSelectedItem">@drawable/sidebar_selected_photon</item>
         <item name="listSeparatorBackground">#DDDDDD</item>
@@ -204,8 +206,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
         <item name="materialPrimary">#212121</item>
         <item name="materialPrimaryDark">#000000</item>
         <item name="android:textColorPrimary">#698CC0</item>
-        <item name="android:textColorSecondary">#698CC0</item>
+        <item name="android:textColorSecondary">#CCCCCC</item>
         <item name="activityRootBackground">#212121</item>
+        <item name="sidebarForeground">#698CC0</item>
         <item name="sidebarBackground">#CC212121</item>
         <item name="sidebarSelectedItem">@drawable/sidebar_selected_neutron</item>
         <item name="listSeparatorBackground">#191919</item>
@@ -233,8 +236,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
         <item name="materialPrimary">#EEF2FF</item>
         <item name="materialPrimaryDark">#34345C</item>
         <item name="android:textColorPrimary">#34345C</item>
-        <item name="android:textColorSecondary">#34345C</item>
+        <item name="android:textColorSecondary">#666666</item>
         <item name="activityRootBackground">#EEF2FF</item>
+        <item name="sidebarForeground">#34345C</item>
         <item name="sidebarBackground">#DDEEF2FF</item>
         <item name="sidebarSelectedItem">@drawable/sidebar_selected_burichan</item>
         <item name="listSeparatorBackground">#B7C5D9</item>
@@ -262,8 +266,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
         <item name="materialPrimary">#EDDAD2</item>
         <item name="materialPrimaryDark">#766D69</item>
         <item name="android:textColorPrimary">#000000</item>
-        <item name="android:textColorSecondary">#000000</item>
+        <item name="android:textColorSecondary">#666666</item>
         <item name="activityRootBackground">#EDDAD2</item>
+        <item name="sidebarForeground">#000000</item>
         <item name="sidebarBackground">#CCEDDAD2</item>
         <item name="sidebarSelectedItem">@drawable/sidebar_selected_gurochan</item>
         <item name="listSeparatorBackground">#D9AF9E</item>
@@ -291,8 +296,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
         <item name="materialPrimary">#1D1F21</item>
         <item name="materialPrimaryDark">#141619</item>
         <item name="android:textColorPrimary">#C5C8C6</item>
-        <item name="android:textColorSecondary">#C5C8C6</item>
+        <item name="android:textColorSecondary">#CCCCCC</item>
         <item name="activityRootBackground">#1D1F21</item>
+        <item name="sidebarForeground">#C5C8C6</item>
         <item name="sidebarBackground">#CC1D1F21</item>
         <item name="sidebarSelectedItem">@drawable/sidebar_selected_tomorrow</item>
         <item name="listSeparatorBackground">#282A2E</item>
@@ -320,8 +326,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
         <item name="materialPrimary">#66EEFF</item>
         <item name="materialPrimaryDark">#408090</item>
         <item name="android:textColorPrimary">#000000</item>
-        <item name="android:textColorSecondary">#000000</item>
+        <item name="android:textColorSecondary">#666666</item>
         <item name="activityRootBackground">#FAFAFA</item>
+        <item name="sidebarForeground">#000000</item>
         <item name="sidebarBackground">#CCFAFAFA</item>
         <item name="sidebarSelectedItem">@drawable/sidebar_selected_mikuba</item>
         <item name="listSeparatorBackground">#EAEFEF</item>
@@ -349,8 +356,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
         <item name="materialPrimary">#1abc9c</item>
         <item name="materialPrimaryDark">#16a085</item>
         <item name="android:textColorPrimary">#eeeeee</item>
-        <item name="android:textColorSecondary">#eeeeee</item>
+        <item name="android:textColorSecondary">#CCCCCC</item>
         <item name="activityRootBackground">#1e1e1e</item>
+        <item name="sidebarForeground">#eeeeee</item>
         <item name="sidebarBackground">#cc212121</item>
         <item name="sidebarSelectedItem">@drawable/sidebar_selected_dark_mint</item>
         <item name="listSeparatorBackground">#16a085</item>
