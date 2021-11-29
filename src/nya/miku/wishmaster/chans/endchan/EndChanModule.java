@@ -72,8 +72,10 @@ public class EndChanModule extends AbstractLynxChanModule {
     private static final String TAG = "EndChanModule";
     
     private static final List<String> DOMAINS_LIST = Arrays.asList(
-            "endchan.xyz", "endchan.net", "endchan.gg", "endchan.org", "endchan5doxvprs5.onion", "s6424n4x4bsmqs27.onion", "endchan.i2p");
-    private static final String DOMAINS_HINT = "endchan.net, endchan.gg, endchan.org (cached), endchan5doxvprs5.onion, s6424n4x4bsmqs27.onion, endchan.i2p";
+            "endchan.net", "endchan.gg", "endchan.org",
+            "enxx3byspwsdo446jujc52ucy2pf5urdbhqw3kbsfhlfjwmbpj5smdad.onion",
+            "endchan.xyz", "endchan5doxvprs5.onion", "s6424n4x4bsmqs27.onion");
+    private static final String DOMAINS_HINT = "endchan.net, endchan.gg, endchan.org (cached), enxx3byspwsdo446jujc52ucy2pf5urdbhqw3kbsfhlfjwmbpj5smdad.onion";
     private static final String DISPLAYING_NAME = "Endchan";
     static final String CHAN_NAME = "endchan.xyz";
     private static final String DEFAULT_DOMAIN = "endchan.net";
@@ -130,7 +132,6 @@ public class EndChanModule extends AbstractLynxChanModule {
     public void addPreferencesOnScreen(PreferenceGroup preferenceGroup) {
         addPasswordPreference(preferenceGroup);
         if (canHttps()) addHttpsPreference(preferenceGroup, useHttpsDefaultValue());
-        addCloudflareRecaptchaFallbackPreference(preferenceGroup);
         addDomainPreferences(preferenceGroup);
         addProxyPreferences(preferenceGroup);
         addClearCookiesPreference(preferenceGroup);

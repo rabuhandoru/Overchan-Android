@@ -85,7 +85,7 @@ import android.app.Activity;
                 activity.runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-                        callback.onError(activity.getString(R.string.error_cloudflare_antiddos));
+                        callback.onError(activity.getString(R.string.error_antiddos));
                     }
                 });
             }

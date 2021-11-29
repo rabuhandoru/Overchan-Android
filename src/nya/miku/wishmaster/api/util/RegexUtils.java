@@ -58,7 +58,9 @@ public class RegexUtils {
         
         StringBuffer buffer = new StringBuffer(source.length());
         do {
-            matcher.appendReplacement(buffer, "$1<a href=\"" + replaceAll(matcher.group(2), WBR, "") + "\">$2</a>");
+            matcher.appendReplacement(buffer, "$1<a href=\""
+                    + Matcher.quoteReplacement(replaceAll(matcher.group(2), WBR, ""))
+                    + "\">$2</a>");
         } while (matcher.find());
         return matcher.appendTail(buffer).toString();
     }

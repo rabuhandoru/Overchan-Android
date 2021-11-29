@@ -49,13 +49,12 @@ import nya.miku.wishmaster.lib.org_json.JSONObject;
 
 public abstract class StormwallChanModule extends AbstractChanModule {
     
-    protected static final String PREF_KEY_STORMWALL_COOKIE_VALUE = "PREF_KEY_STORMWALL_COOKIE";
+    protected static final String PREF_KEY_STORMWALL_COOKIE_VALUE1 = "PREF_KEY_STORMWALL_COOKIE1";
+    protected static final String PREF_KEY_STORMWALL_COOKIE_VALUE2 = "PREF_KEY_STORMWALL_COOKIE2";
     protected static final String PREF_KEY_STORMWALL_COOKIE_DOMAIN = "PREF_KEY_STORMWALL_COOKIE_DOMAIN";
 
-    protected static final String STORMWALL_FIREWALL_HEADER_NAME = "X-FireWall-Protection";
-    protected static final String STORMWALL_FIREWALL_TRUE_VALUE = "True";
-    
-    protected static final String STORMWALL_COOKIE_NAME = "swp_token";
+    protected static final String STORMWALL_COOKIE_NAME1 = "_JHASH__";
+    protected static final String STORMWALL_COOKIE_NAME2 = "_HASH__";
     
     public StormwallChanModule(SharedPreferences preferences, Resources resources) {
         super(preferences, resources);
@@ -72,13 +71,28 @@ public abstract class StormwallChanModule extends AbstractChanModule {
     private static final HttpWrongResponseDetector stormwallDetector = new HttpWrongResponseDetector() {
         @Override
         public void check(final HttpResponseModel model) {
+            boolean cacheControl = false;
+            boolean contentType = false;
+            boolean contentLength = false;
             for (Header header: model.headers) {
-                if (header.getName().equalsIgnoreCase(STORMWALL_FIREWALL_HEADER_NAME) &&
-                    header.getValue().equalsIgnoreCase(STORMWALL_FIREWALL_TRUE_VALUE)) {
-                    HttpWrongResponseException e = new HttpWrongResponseException("Stormwall");
-                    e.setHtmlBytes(HttpStreamer.tryGetBytes(model.stream));
-                    throw e;
+                if (header.getName().equalsIgnoreCase("cache-control") && header.getValue().equalsIgnoreCase("no-cache")) {
+                    cacheControl = true;
+                } else if (header.getName().equalsIgnoreCase("content-type") && header.getValue().equalsIgnoreCase("text/html; charset=utf-8")) {
+                    contentType = true;
+                } else if (header.getName().equalsIgnoreCase("content-length")) {
+                    int size = 0;
+                    try {
+                        size = Integer.parseInt(header.getValue());
+                    } catch (Exception e) {}
+                    if (size >= 1100 && size <= 1150) {
+                        contentLength = true;
+                    }
                 }
+            }
+            if (cacheControl && contentType && contentLength) {
+                HttpWrongResponseException e = new HttpWrongResponseException("Stormwall");
+                e.setHtmlBytes(HttpStreamer.tryGetBytes(model.stream));
+                throw e;
             }
         }
     };
@@ -105,10 +119,15 @@ public abstract class StormwallChanModule extends AbstractChanModule {
     @Override
     protected void initHttpClient() {
         if (canStormwall()) {
-            String stormwallCookieValue = preferences.getString(getSharedKey(PREF_KEY_STORMWALL_COOKIE_VALUE), null);
+            String stormwallCookieValue1 = preferences.getString(getSharedKey(PREF_KEY_STORMWALL_COOKIE_VALUE1), null);
+            String stormwallCookieValue2 = preferences.getString(getSharedKey(PREF_KEY_STORMWALL_COOKIE_VALUE2), null);
             String stormwallCookieDomain = getStormwallCookieDomain();
-            if (stormwallCookieValue != null && stormwallCookieDomain != null) {
-                BasicClientCookie c = new BasicClientCookie(STORMWALL_COOKIE_NAME, stormwallCookieValue);
+            if (stormwallCookieValue1 != null && stormwallCookieValue2 != null && stormwallCookieDomain != null) {
+                BasicClientCookie c;
+                c = new BasicClientCookie(STORMWALL_COOKIE_NAME1, stormwallCookieValue1);
+                c.setDomain(stormwallCookieDomain);
+                httpClient.getCookieStore().addCookie(c);
+                c = new BasicClientCookie(STORMWALL_COOKIE_NAME2, stormwallCookieValue2);
                 c.setDomain(stormwallCookieDomain);
                 httpClient.getCookieStore().addCookie(c);
             }
@@ -119,10 +138,16 @@ public abstract class StormwallChanModule extends AbstractChanModule {
     public void saveCookie(Cookie cookie) {
         super.saveCookie(cookie);
         if (cookie != null) {
-            if (canStormwall() && cookie.getName().equals(STORMWALL_COOKIE_NAME)) {
-                preferences.edit().
-                        putString(getSharedKey(PREF_KEY_STORMWALL_COOKIE_VALUE), cookie.getValue()).
-                        putString(getSharedKey(PREF_KEY_STORMWALL_COOKIE_DOMAIN), cookie.getDomain()).commit();
+            if (canStormwall()) {
+               if (cookie.getName().equals(STORMWALL_COOKIE_NAME1)) {
+                   preferences.edit().
+                       putString(getSharedKey(PREF_KEY_STORMWALL_COOKIE_VALUE1), cookie.getValue()).
+                       putString(getSharedKey(PREF_KEY_STORMWALL_COOKIE_DOMAIN), cookie.getDomain()).commit();
+               } else if (cookie.getName().equals(STORMWALL_COOKIE_NAME2)) {
+                   preferences.edit().
+                       putString(getSharedKey(PREF_KEY_STORMWALL_COOKIE_VALUE2), cookie.getValue()).
+                       putString(getSharedKey(PREF_KEY_STORMWALL_COOKIE_DOMAIN), cookie.getDomain()).commit();
+               }
             }
         }
     }
@@ -131,7 +156,8 @@ public abstract class StormwallChanModule extends AbstractChanModule {
     public void clearCookies() {
         super.clearCookies();
         preferences.edit().
-            remove(getSharedKey(PREF_KEY_STORMWALL_COOKIE_VALUE)).
+            remove(getSharedKey(PREF_KEY_STORMWALL_COOKIE_VALUE1)).
+            remove(getSharedKey(PREF_KEY_STORMWALL_COOKIE_VALUE2)).
             remove(getSharedKey(PREF_KEY_STORMWALL_COOKIE_DOMAIN)).
             commit();
     }

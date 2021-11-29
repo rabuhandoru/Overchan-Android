@@ -33,10 +33,10 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import nya.miku.wishmaster.api.models.SimpleBoardModel;
-import nya.miku.wishmaster.api.util.RegexUtils;
 
 public class KohlBoardsListReader implements Closeable {
-    private static final List<String> NSFW_BOARDS = Arrays.asList(new String[] { "b", "int", "s" });
+    private static final List<String> NSFW_BOARDS = Arrays.asList("b", "pol", "int", "s", "trint", "ru", "br", "m", "km");
+    private static final List<String> EXCLUDED_BOARDS = Arrays.asList("nvip", "alle", "fefe");
     
     private final Reader _in;
     private StringBuilder readBuffer = new StringBuilder();
@@ -54,7 +54,8 @@ public class KohlBoardsListReader implements Closeable {
     private static final char[] LI_CLOSE = "</li>".toCharArray();
     private static final char[] LEGEND_CLOSE = "</h2>".toCharArray();
     
-    private static final Pattern BOARD_PATTERN = Pattern.compile("/(\\w+)/(?:\\s+-\\s+(.*))?", Pattern.DOTALL);
+    private static final Pattern BOARD_PATTERN =
+            Pattern.compile("<a href=\"/([a-z0-9]+)/\">(?:/\\1/\\s+-\\s+(.+))?</a>", Pattern.CASE_INSENSITIVE);
     
     public KohlBoardsListReader(Reader reader) {
         _in = reader;
@@ -65,7 +66,7 @@ public class KohlBoardsListReader implements Closeable {
     }
     
     public SimpleBoardModel[] readBoardsList() throws IOException {
-        boards = new ArrayList<SimpleBoardModel>();
+        boards = new ArrayList<>();
         
         int filtersCount = FILTERS.length;
         int[] pos = new int[filtersCount];
@@ -86,7 +87,7 @@ public class KohlBoardsListReader implements Closeable {
                 }
             }
         }
-        return boards.toArray(new SimpleBoardModel[boards.size()]);
+        return boards.toArray(new SimpleBoardModel[0]);
     }
     
     private void handleFilter(int filter) throws IOException {
@@ -98,14 +99,14 @@ public class KohlBoardsListReader implements Closeable {
                 break;
             case FILTER_BOARD:
                 skipUntilSequence(CLOSE);
-                String board = RegexUtils.removeHtmlTags(readUntilSequence(LI_CLOSE)).trim();
-                Matcher boardMatcher = BOARD_PATTERN.matcher(board);
-                if (boardMatcher.matches()) {
+                String boardHtml = readUntilSequence(LI_CLOSE);
+                Matcher matcher = BOARD_PATTERN.matcher(boardHtml);
+                if (matcher.matches() && EXCLUDED_BOARDS.indexOf(matcher.group(1)) == -1) {
                     SimpleBoardModel model = new SimpleBoardModel();
                     model.chan = KohlchanModule.CHAN_NAME;
-                    model.boardName = boardMatcher.group(1);
-                    model.boardDescription = boardMatcher.group(2) != null ? 
-                            StringEscapeUtils.unescapeHtml4(boardMatcher.group(2)) :
+                    model.boardName = matcher.group(1);
+                    model.boardDescription = matcher.group(2) != null ? 
+                            StringEscapeUtils.unescapeHtml4(matcher.group(2)) :
                             model.boardName;
                     model.boardCategory = currentCategory;
                     model.nsfw = NSFW_BOARDS.indexOf(model.boardName) != -1;

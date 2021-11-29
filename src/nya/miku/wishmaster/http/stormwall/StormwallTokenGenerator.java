@@ -5,30 +5,16 @@ import java.util.Map;
 
 /** Cookie token generator */
 public class StormwallTokenGenerator {
-    private static final char[] ALPHABET = "0123456789qwertyuiopasdfghjklzxcvbnm:?!".toCharArray();
-    private static final Map<Character, Integer> charMap = new HashMap<>();
-    static {
-        for (int i = 0; i < ALPHABET.length; i++) {
-            charMap.put(ALPHABET[i], i);
-        }
-    }
-
-    private static char shift(int modifier, char input) {
-        if (!charMap.containsKey(input)) return input;
-        int newCharPos = (charMap.get(input) + modifier + ALPHABET.length) % ALPHABET.length;
-        return ALPHABET[newCharPos];
-    }
-
-    public static String encrypt(int inputKey, String inputText) {
-        StringBuilder result = new StringBuilder();
-        int modifier = inputKey;
-        for (int i = 0; i < inputText.length(); i++) {
-            result.append(shift(-1 * modifier, inputText.charAt(i)));
-            modifier++;
-            if (modifier >= ALPHABET.length) {
-                modifier = 0;
+    public static String encrypt(int b) {
+        int x = 123456789;
+        int i = 0;
+        int k = 0;
+        for(i = 0; i < 1677696; i++) {
+            x = (x + b ^ x + x % 3 + x % 17 + b ^ i) % (16776960);
+            if(x % 117 == 0) {
+                k = (k + 1) % 1111;
             }
         }
-        return result.toString();
+        return Integer.toString(k);
     }
 }

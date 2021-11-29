@@ -383,7 +383,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
     
     <string name="error_unknown">Невідома помилка</string>
     <string name="error_deserialization">Помилка десеріалізації</string>
-    <string name="error_cloudflare_antiddos">Анти-DDOS CloudFlare не пройдено</string>
+    <string name="error_antiddos">Анти-DDOS не пройдено</string>
     <string name="error_ssl">Помилка SSL/HTTPS</string>
     <string name="error_connection">Помилка з’єднання з сервером</string>
     <string name="error_connection_timeout">Час очікування сплив</string>
@@ -472,8 +472,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
     <string name="pref_use_onion_summary">Вручну спрямуйте трафік програми через Tor</string>
     <string name="pref_use_https">HTTPS</string>
     <string name="pref_use_https_summary">Захищене шифроване з’єднання</string>
-    <string name="pref_cf_recaptcha_fallback">Cloudflare Recaptcha fallback</string>
-    <string name="pref_cf_recaptcha_fallback_summary">Використовувати капчу Cloudflare в режимі сумісності</string>
     <string name="pref_domain">Домен</string>
     <string name="pref_domain_summary">Резервні адреси: %s</string>
     <string name="pref_only_new_posts">Лише нові пости</string>

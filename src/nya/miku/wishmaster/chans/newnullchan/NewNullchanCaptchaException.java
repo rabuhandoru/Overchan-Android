@@ -48,6 +48,7 @@ public class NewNullchanCaptchaException extends SimpleCaptchaException {
     }
 
     protected void storeResponse(String response) {
-        NewNullchanModule.putCaptcha(captchaId, response);
+        ((NewNullchanModule) MainApplication.getInstance().getChanModule(NewNullchanModule.CHAN_NAME))
+                .putCaptcha(captchaId, response);
     }
 }

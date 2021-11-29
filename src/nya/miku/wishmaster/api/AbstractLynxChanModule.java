@@ -306,9 +306,18 @@ public abstract class AbstractLynxChanModule extends AbstractWakabaModule {
             curThread.posts[0] = mapPostModel(thread);
             curThread.threadNumber = curThread.posts[0].number;
             curThread.posts[0].parentThread = curThread.threadNumber;
-            for (int j = 0, plen = posts.length(); j < plen; ++j) {
+            int plen = posts.length();
+            for (int j = 0; j < plen; ++j) {
                 curThread.posts[j + 1] = mapPostModel(posts.getJSONObject(j));
                 curThread.posts[j + 1].parentThread = curThread.threadNumber;
+                if (curThread.posts[j + 1].attachments != null
+                        && curThread.posts[j + 1].attachments.length > 0) {
+                    curThread.attachmentsCount += curThread.posts[j + 1].attachments.length;
+                }
+            }
+            if (curThread.postsCount == 0 && plen > 0) curThread.postsCount = plen + 1;
+            if (curThread.posts[0].attachments != null && curThread.posts[0].attachments.length > 0) {
+                curThread.attachmentsCount += curThread.posts[0].attachments.length;
             }
             result[i] = curThread;
         }
@@ -392,7 +401,8 @@ public abstract class AbstractLynxChanModule extends AbstractWakabaModule {
         model.isSticky = object.optBoolean("pinned", false);
         model.isClosed = object.optBoolean("locked", false);
         model.isCyclical = object.optBoolean("cyclic", false);
-        model.postsCount = object.optInt("ommitedPosts");
+        model.postsCount = object.optInt("omittedPosts", object.optInt("ommitedPosts"));
+        model.attachmentsCount = object.optInt("omittedFiles");
         return model;
     }
 

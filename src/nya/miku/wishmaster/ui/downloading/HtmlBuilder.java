@@ -349,7 +349,7 @@ public class HtmlBuilder implements Closeable {
                     int i = thisThreadUrl.indexOf('#');
                     if (i != -1) thisThreadUrl = thisThreadUrl.substring(0, i);
                     String postNumber = chan.parseUrl(thisThreadUrl + found).postNumber;
-                    url = "#" + postNumber != null ? postNumber : pageModel.threadNumber;
+                    url = "#" + (postNumber != null ? postNumber : pageModel.threadNumber);
                 } catch (Exception e) {
                     url = found;
                 }
@@ -363,7 +363,8 @@ public class HtmlBuilder implements Closeable {
                 } catch (Exception e) { /* ignore */ }
             }
             
-            m.appendReplacement(sb, url.equals(found) ? group : (group.substring(0, oldPos) + url + group.substring(oldPos + oldLen)));
+            m.appendReplacement(sb, Matcher.quoteReplacement(url.equals(found) ? group
+                    : (group.substring(0, oldPos) + url + group.substring(oldPos + oldLen))));
         } while (m.find());
         m.appendTail(sb);
         return sb.toString();

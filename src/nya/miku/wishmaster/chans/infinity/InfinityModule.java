@@ -78,12 +78,10 @@ public class InfinityModule extends AbstractVichanModule {
     private static final String CHAN_NAME = "8chan";
     private static final String DEFAULT_DOMAIN = "8kun.top";
     private static final String SYSTEM_DOMAIN = "sys.8kun.top";
-    private static final String MEDIA_DOMAIN = "media.8kun.top";
-    //private static final String MEDIA2_DOMAIN = "media2.8kun.top";
-    private static final String ONION_DOMAIN = "jthnx5wyvjvzsxtu.onion";
-    private static final String ONION_SYSTEM_DOMAIN = "sys.jthnx5wyvjvzsxtu.onion";
-    private static final String ONION_MEDIA_DOMAIN = "media.jthnx5wyvjvzsxtu.onion";
-    private static final String[] DOMAINS = new String[] { DEFAULT_DOMAIN, ONION_DOMAIN, "8ch.net", "8kun.net", "8chan.co" };
+    private static final String MEDIA_DOMAIN = "media.128ducks.com";
+    private static final String ONION_DOMAIN = "8kun.top.qulatc2tl34vwefcc2pbsxi7vennhbew57jbl2d3pbhvjhozkoizdoqd.onion";
+    private static final String ONION_SYSTEM_DOMAIN = "sys.8kun.top.qulatc2tl34vwefcc2pbsxi7vennhbew57jbl2d3pbhvjhozkoizdoqd.onion";
+    private static final String[] DOMAINS = new String[] { DEFAULT_DOMAIN, ONION_DOMAIN, "jthnx5wyvjvzsxtu.onion", "8ch.net", "8kun.net" };
     
     private static final String[] ATTACHMENT_FORMATS = new String[] { "jpg", "jpeg", "gif", "png", "webm", "mp4", "swf", "pdf" };
     private static final FastHtmlTagParser.TagReplaceHandler PARAGRAPH_REPLACER = new FastHtmlTagParser.TagReplaceHandler() {
@@ -91,8 +89,9 @@ public class InfinityModule extends AbstractVichanModule {
         public FastHtmlTagParser.TagsPair replace(FastHtmlTagParser.TagsPair source) {
             if (source.openTag.equals("<p class=\"body-line ltr quote\">")) {
                 return new FastHtmlTagParser.TagsPair("<span class=\"quote\">", "</span><br />");
-            }
-            return new FastHtmlTagParser.TagsPair("", "<br />");
+            } else if (source.openTag.equals("<p class=\"body-line ltr rquote\">")) {
+                return new FastHtmlTagParser.TagsPair("<font color=\"#E0727F\">", "</font><br />");
+            } else return new FastHtmlTagParser.TagsPair("", "<br />");
         }
     };
     
@@ -177,9 +176,7 @@ public class InfinityModule extends AbstractVichanModule {
 
     private String getMediaUrl(String urlPath) {
         if (urlPath == null) return null;
-        String mediaDomain = preferences.getBoolean(getSharedKey(PREF_KEY_USE_ONION), false) ?
-                ONION_MEDIA_DOMAIN : MEDIA_DOMAIN;
-        return fixRelativeUrl(urlPath).replaceFirst(getUsingDomain(), mediaDomain);
+        return fixRelativeUrl(urlPath).replaceFirst(getUsingDomain(), MEDIA_DOMAIN);
     }
     
     @Override
@@ -296,15 +293,16 @@ public class InfinityModule extends AbstractVichanModule {
         String tim = object.optString("tim", "");
         String ext = object.optString("ext", "");
         if (attachment != null && tim.length() > 0 && ext.length() > 0) {
-            String thumbLocation = tim.length() == 64 ? "/file_store/thumb/" : "/" + boardName + "/thumb/";
-            String fileLocation = tim.length() == 64 ? "/file_store/" : "/" + boardName + "/src/";
-            String thumbnailExt = ext;
-            if (tim.length() != 64 || attachment.type == AttachmentModel.TYPE_VIDEO) {
-                thumbnailExt = ".jpg";
+            boolean newPath = object.optInt("fpath", 0) == 1;
+            String thumbLocation = newPath ? "/file_store/thumb/" : "/" + boardName + "/thumb/";
+            String fileLocation = newPath ? "/file_store/" : "/" + boardName + "/src/";
+            if (isSpoiler || attachment.type == AttachmentModel.TYPE_AUDIO
+                    || attachment.type == AttachmentModel.TYPE_OTHER_FILE) {
+                attachment.thumbnail = null;
+            } else {
+                String thumbnailExt = newPath && attachment.type != AttachmentModel.TYPE_VIDEO ? ext : ".jpg";
+                attachment.thumbnail = thumbLocation + tim + thumbnailExt;
             }
-            attachment.thumbnail = isSpoiler || attachment.type == AttachmentModel.TYPE_AUDIO
-                    || attachment.type == AttachmentModel.TYPE_OTHER_FILE ? null
-                    : thumbLocation + tim + thumbnailExt;
             attachment.path = fileLocation + tim + ext;
             if (getUsingDomain().equals(DEFAULT_DOMAIN) || getUsingDomain().equals(ONION_DOMAIN)) {
                 attachment.thumbnail = getMediaUrl(attachment.thumbnail);
@@ -314,31 +312,7 @@ public class InfinityModule extends AbstractVichanModule {
         }
         return null;
     }
-/*
-    @Override
-    public void downloadFile(String url, OutputStream out, ProgressListener listener, CancellableTask task) throws Exception {
-        String fixedUrl = fixRelativeUrl(url);
-        try {
-            super.downloadFile(fixedUrl, out, listener, task);
-        } catch (HttpWrongStatusCodeException e) {
-            if (e.getStatusCode() == 404 && (url.contains("/file_store/") || url.contains("/src/"))) {
-                switch (Uri.parse(fixedUrl).getHost()) {
-                    case MEDIA_DOMAIN:
-                        downloadFile(fixedUrl.replaceFirst(MEDIA_DOMAIN, MEDIA2_DOMAIN), out, listener, task);
-                        break;
-                    case MEDIA2_DOMAIN:
-                        downloadFile(fixedUrl.replaceFirst(MEDIA2_DOMAIN, DEFAULT_DOMAIN), out, listener, task);
-                        break;
-                    default:
-                        throw e;
-                }
-            } else {
-                throw e;
-            }
-        }
-    }
-*/
-    
+
     @Override
     public ThreadModel[] getThreadsList(String boardName, int page, ProgressListener listener, CancellableTask task, ThreadModel[] oldList)
             throws Exception {

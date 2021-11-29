@@ -21,19 +21,14 @@ package nya.miku.wishmaster.http.interactive;
 import nya.miku.wishmaster.api.interfaces.CancellableTask;
 import android.app.Activity;
 
-import nya.miku.wishmaster.common.Logger;
-
 /**
  * Базовый класс для универсальных (интерактивных и неинтерактивных) исключений
- *
  */
 public abstract class MultipurposeException extends InteractiveException {
     @Override
     public final void handle(Activity activity, CancellableTask task, final Callback callback) {
-        Logger.d("STORMWALL", "handle");
         final String error;
-		if ((error = handle(task)) == null && !task.isCancelled()) {
-            Logger.d("STORMWALL", "success");
+        if ((error = handle(task)) == null && !task.isCancelled()) {
             activity.runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
@@ -41,7 +36,6 @@ public abstract class MultipurposeException extends InteractiveException {
                 }
             });
         } else if (!task.isCancelled()) {
-            Logger.d("STORMWALL", "error");
             activity.runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
@@ -50,10 +44,9 @@ public abstract class MultipurposeException extends InteractiveException {
             });
         }
     }
-
     /**
      * Метод вызывается синхронно.
      * Возвращаемое значение - строка с описанием ошибки, либо null.
      */
-	public abstract String handle(CancellableTask task);
+    public abstract String handle(CancellableTask task);
 }
